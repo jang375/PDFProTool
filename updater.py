@@ -331,9 +331,9 @@ echo [%date% %time%] 업데이트 시작 (zip 모드) >> "%LOG%"
 echo [%date% %time%] PID={pid} exe="{current_exe}" >> "%LOG%"
 echo [%date% %time%] source="{source_dir}" >> "%LOG%"
 
-:: 프로세스 강제 종료 후 대기
+:: 프로세스 강제 종료 후 대기 (ping은 콘솔 없이도 동작)
 taskkill /PID {pid} /F >nul 2>&1
-timeout /t 3 /nobreak >nul
+ping -n 4 127.0.0.1 >nul 2>&1
 
 :: 프로세스 완전 종료 대기 (최대 15초)
 set RETRY=0
@@ -345,7 +345,7 @@ if not errorlevel 1 (
         echo [%date% %time%] ERROR: 프로세스 종료 대기 타임아웃 >> "%LOG%"
         goto :cleanup_exit
     )
-    timeout /t 1 /nobreak >nul
+    ping -n 2 127.0.0.1 >nul 2>&1
     goto wait_loop
 )
 echo [%date% %time%] 프로세스 종료 확인 >> "%LOG%"
@@ -367,7 +367,7 @@ if errorlevel 1 (
         goto :cleanup_exit
     )
     echo [%date% %time%] 앱 폴더 이름 변경 재시도 %RETRY% >> "%LOG%"
-    timeout /t 2 /nobreak >nul
+    ping -n 3 127.0.0.1 >nul 2>&1
     goto move_old_loop
 )
 echo [%date% %time%] 앱 폴더 → .old 이동 완료 >> "%LOG%"
@@ -408,9 +408,9 @@ echo [%date% %time%] 업데이트 시작 (exe 모드) >> "%LOG%"
 echo [%date% %time%] PID={pid} exe="{current_exe}" >> "%LOG%"
 echo [%date% %time%] source="{downloaded_path}" >> "%LOG%"
 
-:: 프로세스 강제 종료 후 대기
+:: 프로세스 강제 종료 후 대기 (ping은 콘솔 없이도 동작)
 taskkill /PID {pid} /F >nul 2>&1
-timeout /t 3 /nobreak >nul
+ping -n 4 127.0.0.1 >nul 2>&1
 
 :: 프로세스 완전 종료 대기 (최대 15초)
 set RETRY=0
@@ -422,7 +422,7 @@ if not errorlevel 1 (
         echo [%date% %time%] ERROR: 프로세스 종료 대기 타임아웃 >> "%LOG%"
         goto :cleanup_exit
     )
-    timeout /t 1 /nobreak >nul
+    ping -n 2 127.0.0.1 >nul 2>&1
     goto wait_loop
 )
 echo [%date% %time%] 프로세스 종료 확인 >> "%LOG%"
@@ -439,7 +439,7 @@ if exist "{current_exe}" (
             goto :cleanup_exit
         )
         echo [%date% %time%] exe 백업 재시도 %RETRY% >> "%LOG%"
-        timeout /t 2 /nobreak >nul
+        ping -n 3 127.0.0.1 >nul 2>&1
         goto move_exe_loop
     )
 )
@@ -475,10 +475,11 @@ del "%~f0" >nul 2>&1
     logger.info(f"업데이트 로그: {log_path}")
 
     # bat 실행 (현재 프로세스와 독립적으로)
+    # CREATE_NO_WINDOW만 사용 — DETACHED_PROCESS와 함께 쓰면
+    # 콘솔이 아예 없어져서 timeout/tasklist 등의 명령이 실패함
     subprocess.Popen(
         ["cmd", "/c", bat_path],
-        creationflags=subprocess.CREATE_NO_WINDOW | subprocess.DETACHED_PROCESS,
-        close_fds=True,
+        creationflags=subprocess.CREATE_NO_WINDOW | subprocess.CREATE_NEW_PROCESS_GROUP,
     )
 
     # 현재 앱 종료 — os._exit로 확실하게 프로세스 종료
