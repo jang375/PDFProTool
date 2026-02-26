@@ -303,6 +303,8 @@ def _apply_update_and_restart(downloaded_path: str):
     current_exe = sys.executable
     app_dir = os.path.dirname(current_exe)
     bat_path = os.path.join(tempfile.gettempdir(), "pdfprotool_update.bat")
+    log_path = os.path.join(tempfile.gettempdir(), "pdfprotool_update.log")
+    pid = os.getpid()
 
     if downloaded_path.lower().endswith(".zip"):
         # zip 압축 해제 → 임시 폴더
@@ -324,68 +326,153 @@ def _apply_update_and_restart(downloaded_path: str):
 
         bat_content = f"""@echo off
 chcp 65001 >nul
-echo 업데이트 적용 중...
-:: 현재 프로세스 종료 대기
-timeout /t 2 /nobreak >nul
+set "LOG={log_path}"
+echo [%date% %time%] 업데이트 시작 (zip 모드) >> "%LOG%"
+echo [%date% %time%] PID={pid} exe="{current_exe}" >> "%LOG%"
+echo [%date% %time%] source="{source_dir}" >> "%LOG%"
+
+:: 프로세스 강제 종료 후 대기
+taskkill /PID {pid} /F >nul 2>&1
+timeout /t 3 /nobreak >nul
+
+:: 프로세스 완전 종료 대기 (최대 15초)
+set RETRY=0
 :wait_loop
-tasklist /FI "PID eq {os.getpid()}" 2>nul | find /I "{os.getpid()}" >nul
+tasklist /FI "PID eq {pid}" 2>nul | find /I "{pid}" >nul
 if not errorlevel 1 (
+    set /a RETRY+=1
+    if %RETRY% GEQ 15 (
+        echo [%date% %time%] ERROR: 프로세스 종료 대기 타임아웃 >> "%LOG%"
+        goto :cleanup_exit
+    )
     timeout /t 1 /nobreak >nul
     goto wait_loop
 )
+echo [%date% %time%] 프로세스 종료 확인 >> "%LOG%"
 
 :: 이전 .old 폴더가 남아있으면 삭제
 if exist "{old_dir}" (
-    rmdir /S /Q "{old_dir}"
+    rmdir /S /Q "{old_dir}" >nul 2>&1
+    echo [%date% %time%] 이전 .old 폴더 삭제 >> "%LOG%"
 )
 
-:: 기존 앱 폴더를 .old로 이름 변경
-move /Y "{app_dir}" "{old_dir}"
+:: 기존 앱 폴더를 .old로 이름 변경 (재시도 포함)
+set RETRY=0
+:move_old_loop
+move /Y "{app_dir}" "{old_dir}" >nul 2>&1
+if errorlevel 1 (
+    set /a RETRY+=1
+    if %RETRY% GEQ 5 (
+        echo [%date% %time%] ERROR: 앱 폴더 이름 변경 실패 >> "%LOG%"
+        goto :cleanup_exit
+    )
+    echo [%date% %time%] 앱 폴더 이름 변경 재시도 %RETRY% >> "%LOG%"
+    timeout /t 2 /nobreak >nul
+    goto move_old_loop
+)
+echo [%date% %time%] 앱 폴더 → .old 이동 완료 >> "%LOG%"
 
 :: 새 폴더를 앱 위치로 이동
-move /Y "{source_dir}" "{app_dir}"
+move /Y "{source_dir}" "{app_dir}" >nul 2>&1
+if errorlevel 1 (
+    echo [%date% %time%] ERROR: 새 폴더 이동 실패, 롤백 시도 >> "%LOG%"
+    move /Y "{old_dir}" "{app_dir}" >nul 2>&1
+    goto :cleanup_exit
+)
+echo [%date% %time%] 새 폴더 이동 완료 >> "%LOG%"
 
 :: 재시작
+echo [%date% %time%] 앱 재시작 >> "%LOG%"
 start "" "{current_exe}"
 
 :: 임시 파일 정리
-if exist "{downloaded_path}" del /Q "{downloaded_path}"
-if exist "{extract_dir}" rmdir /S /Q "{extract_dir}"
+if exist "{downloaded_path}" del /Q "{downloaded_path}" >nul 2>&1
+if exist "{extract_dir}" rmdir /S /Q "{extract_dir}" >nul 2>&1
+echo [%date% %time%] 업데이트 완료! >> "%LOG%"
+goto :eof
 
-:: bat 자기 삭제
-del "%~f0"
+:cleanup_exit
+echo [%date% %time%] 업데이트 실패 — 앱을 수동으로 재시작하세요. >> "%LOG%"
+:: 원본이 남아있으면 재시작 시도
+if exist "{current_exe}" start "" "{current_exe}"
+
+:eof
+del "%~f0" >nul 2>&1
 """
     else:
         # 단일 exe 업데이트 (하위 호환)
         bat_content = f"""@echo off
 chcp 65001 >nul
-echo 업데이트 적용 중...
-:: 현재 프로세스 종료 대기
-timeout /t 2 /nobreak >nul
+set "LOG={log_path}"
+echo [%date% %time%] 업데이트 시작 (exe 모드) >> "%LOG%"
+echo [%date% %time%] PID={pid} exe="{current_exe}" >> "%LOG%"
+echo [%date% %time%] source="{downloaded_path}" >> "%LOG%"
+
+:: 프로세스 강제 종료 후 대기
+taskkill /PID {pid} /F >nul 2>&1
+timeout /t 3 /nobreak >nul
+
+:: 프로세스 완전 종료 대기 (최대 15초)
+set RETRY=0
 :wait_loop
-tasklist /FI "PID eq {os.getpid()}" 2>nul | find /I "{os.getpid()}" >nul
+tasklist /FI "PID eq {pid}" 2>nul | find /I "{pid}" >nul
 if not errorlevel 1 (
+    set /a RETRY+=1
+    if %RETRY% GEQ 15 (
+        echo [%date% %time%] ERROR: 프로세스 종료 대기 타임아웃 >> "%LOG%"
+        goto :cleanup_exit
+    )
     timeout /t 1 /nobreak >nul
     goto wait_loop
 )
+echo [%date% %time%] 프로세스 종료 확인 >> "%LOG%"
 
-:: 기존 exe 백업
+:: 기존 exe 백업 (재시도 포함)
+set RETRY=0
+:move_exe_loop
 if exist "{current_exe}" (
-    move /Y "{current_exe}" "{current_exe}.old"
+    move /Y "{current_exe}" "{current_exe}.old" >nul 2>&1
+    if errorlevel 1 (
+        set /a RETRY+=1
+        if %RETRY% GEQ 5 (
+            echo [%date% %time%] ERROR: exe 백업 실패 >> "%LOG%"
+            goto :cleanup_exit
+        )
+        echo [%date% %time%] exe 백업 재시도 %RETRY% >> "%LOG%"
+        timeout /t 2 /nobreak >nul
+        goto move_exe_loop
+    )
 )
+echo [%date% %time%] exe 백업 완료 >> "%LOG%"
 
 :: 새 exe 복사
-copy /Y "{downloaded_path}" "{current_exe}"
+copy /Y "{downloaded_path}" "{current_exe}" >nul 2>&1
+if errorlevel 1 (
+    echo [%date% %time%] ERROR: exe 복사 실패, 롤백 시도 >> "%LOG%"
+    move /Y "{current_exe}.old" "{current_exe}" >nul 2>&1
+    goto :cleanup_exit
+)
+echo [%date% %time%] exe 복사 완료 >> "%LOG%"
 
 :: 재시작
+echo [%date% %time%] 앱 재시작 >> "%LOG%"
 start "" "{current_exe}"
+echo [%date% %time%] 업데이트 완료! >> "%LOG%"
+goto :eof
 
-:: bat 자기 삭제
-del "%~f0"
+:cleanup_exit
+echo [%date% %time%] 업데이트 실패 — 앱을 수동으로 재시작하세요. >> "%LOG%"
+if exist "{current_exe}" start "" "{current_exe}"
+
+:eof
+del "%~f0" >nul 2>&1
 """
 
     with open(bat_path, "w", encoding="utf-8") as f:
         f.write(bat_content)
+
+    logger.info(f"업데이트 bat 생성: {bat_path}")
+    logger.info(f"업데이트 로그: {log_path}")
 
     # bat 실행 (현재 프로세스와 독립적으로)
     subprocess.Popen(
@@ -394,11 +481,15 @@ del "%~f0"
         close_fds=True,
     )
 
-    # 현재 앱 종료
+    # 현재 앱 종료 — os._exit로 확실하게 프로세스 종료
+    # app.quit()만 쓰면 Qt 이벤트 루프가 지연되어 exe 파일 잠금이 풀리지 않을 수 있음
     from PyQt6.QtWidgets import QApplication
     app = QApplication.instance()
     if app:
         app.quit()
+    # Qt가 즉시 종료하지 않을 수 있으므로 강제 종료
+    from PyQt6.QtCore import QTimer
+    QTimer.singleShot(1000, lambda: os._exit(0))
 
 
 # ─────────────────────────────────────────────
