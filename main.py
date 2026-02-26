@@ -6,6 +6,9 @@ Converted from Swift/macOS to Python/PyQt6/PyMuPDF
 import sys
 import os
 import ctypes
+import logging
+
+logger = logging.getLogger(__name__)
 
 # High-DPI support
 os.environ.setdefault("QT_ENABLE_HIGHDPI_SCALING", "1")
@@ -19,12 +22,14 @@ try:
 except OSError:
     _winmm = None
 
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import QApplication
 
 from main_window import MainWindow
 from panels import preload_fonts
+from updater import UpdateManager, cleanup_old_files
+from version import __version__
 
 
 def main():
@@ -74,6 +79,9 @@ def main():
         QProgressBar::chunk { background: #2979FF; }
     """)
 
+    # 이전 업데이트에서 남은 .old 백업 파일 정리
+    cleanup_old_files()
+
     window = MainWindow()
 
     # Open files passed as command-line arguments
@@ -82,6 +90,11 @@ def main():
             window.load_file(arg)
 
     window.show()
+
+    # MainWindow 표시 직후 비동기로 업데이트 확인
+    updater = UpdateManager(parent=window)
+    QTimer.singleShot(1500, updater.check_for_updates)
+
     exit_code = app.exec()
 
     # Restore Windows timer resolution on exit
