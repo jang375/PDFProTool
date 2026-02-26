@@ -9,8 +9,18 @@ Supports continuous scroll, zoom, annotation drag/resize/edit.
 from __future__ import annotations
 
 import bisect
+import logging
 import math
+import os
 from typing import Optional, Callable
+
+# ── 텍스트 편집 디버그 로그 ─────────────────────────────
+_log = logging.getLogger("text_edit")
+_log.setLevel(logging.DEBUG)
+_log_dir = os.path.dirname(os.path.abspath(__file__))
+_fh = logging.FileHandler(os.path.join(_log_dir, "text_edit_debug.log"), encoding="utf-8")
+_fh.setFormatter(logging.Formatter("%(asctime)s  %(message)s"))
+_log.addHandler(_fh)
 
 import fitz  # PyMuPDF
 from PyQt6.QtCore import (
@@ -321,6 +331,7 @@ class PDFViewWidget(QWidget):
         self._render_cache: OrderedDict[tuple[int, float], QPixmap] = OrderedDict()
         self._low_res_cache: OrderedDict[tuple[int, float], QPixmap] = OrderedDict()
         self._pending_renders: set[tuple[int, float]] = set()
+        self._page_render_gen: dict[int, int] = {}  # page_index → generation counter
         self._thread_pool = QThreadPool.globalInstance()
         # Optimize thread pool
         self._thread_pool.setMaxThreadCount(8)  # Increase count for background queueing
@@ -584,16 +595,17 @@ class PDFViewWidget(QWidget):
         self._pending_renders.add(key)
 
         # Create worker — 수정된 doc이 있으면 bytes 스냅샷 사용, 없으면 원본 파일
+        gen = self._page_render_gen.get(page_index, 0)
         worker = RenderWorker(
             self._file_path, page_index, self._zoom,
             is_valid_cb=lambda z=self._zoom: self._is_render_valid(page_index, z),
             doc_bytes=self._doc_bytes_snapshot,
         )
         # Signal emits QImage, is_high_res
-        worker.signals.finished.connect(lambda img, is_high_res, idx=page_index, k=key: self._on_render_finished(img, is_high_res, idx, k))
+        worker.signals.finished.connect(lambda img, is_high_res, idx=page_index, k=key, g=gen: self._on_render_finished(img, is_high_res, idx, k, g))
         self._thread_pool.start(worker)
 
-    def _on_render_finished(self, image: QImage, is_high_res: bool, page_index: int, key: tuple[int, float]):
+    def _on_render_finished(self, image: QImage, is_high_res: bool, page_index: int, key: tuple[int, float], gen: int = 0):
         """Callback from background thread (via signal)."""
         if is_high_res and key in self._pending_renders:
             self._pending_renders.remove(key)
@@ -601,6 +613,10 @@ class PDFViewWidget(QWidget):
         # Discard stale renders: zoom changed while this worker was rendering.
         current_key = (page_index, round(self._zoom, 3))
         if key != current_key:
+            return
+
+        # Discard stale renders: page was invalidated (edited) after this render started.
+        if gen != self._page_render_gen.get(page_index, 0):
             return
 
         if not image.isNull():
@@ -1282,9 +1298,14 @@ class PDFViewWidget(QWidget):
         """doc이 수정된 후 호출 — RenderWorker가 최신 내용을 렌더링하도록 bytes 스냅샷 갱신."""
         if self._doc:
             try:
-                self._doc_bytes_snapshot = self._doc.tobytes()
-            except Exception:
-                pass
+                self._doc_bytes_snapshot = self._doc.tobytes(deflate=True)
+            except Exception as e:
+                _log.error(f"_snapshot_doc_bytes FAILED: {e}")
+                # Fallback: try without deflate
+                try:
+                    self._doc_bytes_snapshot = self._doc.tobytes()
+                except Exception as e2:
+                    _log.error(f"_snapshot_doc_bytes fallback ALSO FAILED: {e2}")
 
     def _invalidate_page(self, page_index: int):
         """Remove cached render for a page (to force re-render)."""
@@ -1294,6 +1315,12 @@ class PDFViewWidget(QWidget):
         keys_low = [k for k in self._low_res_cache if k[0] == page_index]
         for k in keys_low:
             del self._low_res_cache[k]
+        # Increment generation so in-flight renders with old data are discarded
+        self._page_render_gen[page_index] = self._page_render_gen.get(page_index, 0) + 1
+        # Clear pending flags so new renders can be started
+        keys_pending = [k for k in self._pending_renders if k[0] == page_index]
+        for k in keys_pending:
+            self._pending_renders.discard(k)
 
     def _prerender_near_pages(self, center_page: int, lookahead: int = 10, lookbehind: int = 4):
         """Pre-render pages near center_page so they're ready before scrolling to them."""
@@ -1816,11 +1843,15 @@ class PDFViewWidget(QWidget):
             original_key_press(event)
         editor.keyPressEvent = _on_key_press
 
-        # Focus-out commits
+        # Focus-out commits (only if this editor is still the active one)
         _orig_focus_out = editor.focusOutEvent
+        _target_editor = editor
         def _on_focus_out(event):
             _orig_focus_out(event)
-            QTimer.singleShot(0, self._commit_text_edit)
+            def _deferred_commit():
+                if self._text_edit_widget is _target_editor:
+                    self._commit_text_edit()
+            QTimer.singleShot(0, _deferred_commit)
         editor.focusOutEvent = _on_focus_out
 
     def _cancel_text_edit(self):
@@ -1844,6 +1875,15 @@ class PDFViewWidget(QWidget):
         line_info = self._text_edit_line_info
         page_index = self._text_edit_page
 
+        # ── 한글 IME 조합 커밋 ──────────────────────────────────
+        # mousePressEvent는 focusOutEvent보다 먼저 발생하므로,
+        # 위젯에 아직 포커스가 있을 때 IME 조합 중인 글자가 text()에 포함되지 않는다.
+        # inputMethod().commit()을 호출하여 조합 문자를 확정한다.
+        from PyQt6.QtWidgets import QApplication
+        im = QApplication.inputMethod()
+        if im:
+            im.commit()
+
         # Clear state to prevent re-entry
         self._text_edit_widget = None
         self._text_edit_line_info = None
@@ -1861,11 +1901,15 @@ class PDFViewWidget(QWidget):
         widget.hide()
         widget.deleteLater()
 
+        _log.info(f"old={old_text!r}  new={new_text!r}  same={new_text == old_text}")
+
         if new_text == old_text or not new_text.strip():
+            _log.info("SKIP — no change or empty")
             self.update()
             return
 
         if not self._doc or page_index >= self._doc.page_count:
+            _log.info(f"SKIP — no doc or bad page_index={page_index}")
             return
 
         # Extract formatting from the original line
@@ -1877,42 +1921,31 @@ class PDFViewWidget(QWidget):
         origin = line_info["origin"]
         bbox = line_info["bbox"]
 
+        edit_ok = False
         try:
             page = self._doc[page_index]
 
             # ── 폰트 결정 ────────────────────────────────────────
-            # 1순위: PDF 내장 폰트 추출 → 원본과 동일한 폰트 재사용
-            # 2순위: 시스템 폰트 파일 매핑 (폰트 이름/굵기 기반)
-            # 3순위: PyMuPDF 내장 폰트 (fallback)
             font_kwargs = self._extract_embedded_font(page, line_info["font"])
             if font_kwargs is None:
                 font_kwargs = self._map_to_fitz_font(line_info["font"], new_text)
+            _log.info(f"font={line_info['font']!r}  kwargs={font_kwargs}")
 
-            # ── 배경색 감지 ──────────────────────────────────────
-            # bbox 중심 픽셀의 배경색을 샘플링하여 커버 색상으로 사용한다.
-            # apply_redactions() 대신 draw_rect()를 쓰는 이유:
-            #   apply_redactions()는 PDF 콘텐츠 스트림 전체를 재작성하여
-            #   페이지의 모든 텍스트 좌표가 오른쪽으로 밀리는 버그를 유발한다.
-            #   draw_rect()는 콘텐츠 스트림을 건드리지 않고 덮어씌우기만 하므로
-            #   다른 텍스트 위치에 영향을 주지 않는다.
-            bg_color = self._sample_background_color(page, bbox)
-
-            # 1) 기존 텍스트 영역을 배경색 사각형으로 덮는다
-            #    overlay=True: 기존 콘텐츠 위에 그린다 (텍스트가 가려짐)
+            # 1) 원본 텍스트를 Redaction으로 깔끔하게 지운다 (배경 그래픽, 이미지 등은 보존)
             cover_rect = fitz.Rect(
-                bbox.x0 - 1, bbox.y0 - 1,
-                bbox.x1 + 1, bbox.y1 + 1,
+                bbox.x0 - 0.5, bbox.y0 - 0.5,
+                bbox.x1 + 0.5, bbox.y1 + 0.5,
             )
-            page.draw_rect(cover_rect, color=None, fill=bg_color, overlay=True)
+            page.add_redact_annot(cover_rect)
+            # text=0(텍스트만 제거), images=0(이미지 보존), graphics=0(그래픽 보존)
+            page.apply_redactions(images=0, graphics=0, text=0)
+            _log.info("apply_redactions OK")
 
             # 2) 원래 baseline 위치에 새 텍스트 삽입
-            #    first_char_x: 첫 글자의 시각적 x 위치 (폰트 bearing 무관)
-            #    origin[0]: span의 text origin (폰트 bearing 포함, 교체 시 어긋남)
-            #    render_mode=0: fill only (스트로크 없음 → 볼드/음영 방지)
             first_char_x = line_info.get("first_char_x")
             insert_x = first_char_x if first_char_x is not None else origin[0]
             insert_point = fitz.Point(insert_x, origin[1])
-            page.insert_text(
+            rc = page.insert_text(
                 insert_point,
                 new_text,
                 fontsize=font_size,
@@ -1920,11 +1953,18 @@ class PDFViewWidget(QWidget):
                 render_mode=0,
                 **font_kwargs,
             )
+            _log.info(f"insert_text OK  rc={rc}  point={insert_point}")
+            edit_ok = True
         except Exception as e:
-            print(f"Text edit error: {e}")
+            import traceback
+            _log.error(f"EXCEPTION: {e}\n{traceback.format_exc()}")
 
         # 수정된 doc 상태를 bytes로 스냅샷 → RenderWorker가 최신 내용 렌더링
+        old_snapshot_id = id(self._doc_bytes_snapshot)
         self._snapshot_doc_bytes()
+        new_snapshot_id = id(self._doc_bytes_snapshot)
+        _log.info(f"snapshot changed={old_snapshot_id != new_snapshot_id}  "
+                  f"has_bytes={self._doc_bytes_snapshot is not None}  edit_ok={edit_ok}")
 
         # Invalidate caches so the page re-renders
         if page_index in self._text_edit_lines_cache:
@@ -1981,6 +2021,15 @@ class PDFViewWidget(QWidget):
                 break
             if cp > 0x2E7F:
                 has_cjk = True
+
+        # 만약 텍스트에 한글/CJK가 없더라도 원본 폰트가 CJK 계열이면 유지 (예: 영어 전문 수정 시 폰트 깨짐 방지)
+        original_lower = original_font.lower().replace("-", "").replace(" ", "").replace("_", "")
+        for keyword in ["malgun", "gothic", "gulim", "dotum", "batang", "gungsuh", "myeongjo", "nanum", "korea"]:
+            if keyword in original_lower:
+                has_cjk = True
+                if keyword in ["malgun", "gothic", "gulim", "dotum", "batang", "gungsuh", "myeongjo", "nanum", "korea"]:
+                    has_korean = True
+                break
 
         if has_cjk:
             windir = os.environ.get("WINDIR", "C:\\Windows")
@@ -2117,7 +2166,13 @@ class PDFViewWidget(QWidget):
         except Exception:
             return None
 
-        for xref, _ext, _ftype, fname, sname, _encoding in fonts:
+        for font_info in fonts:
+            if len(font_info) < 5:
+                continue
+            xref = font_info[0]
+            fname = font_info[3]
+            sname = font_info[4]
+
             # fname 또는 sname이 원본 폰트 이름과 일치하는지 확인
             if font_name not in (fname, sname):
                 continue
@@ -2400,12 +2455,17 @@ class PDFScrollView(QScrollArea):
         new_zoom = self._pdf_widget.zoom
         if old_zoom > 0 and abs(new_zoom - old_zoom) > 0.001:
             ratio = new_zoom / old_zoom
-            new_vscroll = int((old_vscroll + vh / 2) * ratio - vh / 2)
-            vbar.setValue(max(0, new_vscroll))
+            new_vscroll = max(0, int((old_vscroll + vh / 2) * ratio - vh / 2))
+            vbar.setValue(new_vscroll)
+            # Apply again via deferred call so Qt's layout event cannot override us
+            _sv = new_vscroll
+            QTimer.singleShot(0, lambda: vbar.setValue(_sv))
             # 가로: 페이지가 뷰포트보다 넓으면 페이지 중앙에 맞춤
             widget_w = self._pdf_widget.width()
             if widget_w > vw:
-                hbar.setValue(max(0, (widget_w - vw) // 2))
+                hval = max(0, (widget_w - vw) // 2)
+                hbar.setValue(hval)
+                QTimer.singleShot(0, lambda: hbar.setValue(hval))
             else:
                 hbar.setValue(0)
 
