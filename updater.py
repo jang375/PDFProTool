@@ -8,9 +8,11 @@ from __future__ import annotations
 import json
 import logging
 import os
+import shutil
 import sys
 import subprocess
 import tempfile
+import zipfile
 from typing import Optional
 from urllib.request import urlopen, Request
 from urllib.error import URLError
@@ -69,16 +71,22 @@ class UpdateCheckWorker(QThread):
                 self.no_update.emit()
                 return
 
-            # exe 에셋 찾기
+            # 에셋 찾기 (.zip 우선, .exe 폴백)
             download_url = ""
+            exe_url = ""
             for asset in data.get("assets", []):
                 name: str = asset.get("name", "")
-                if name.lower().endswith(".exe"):
-                    download_url = asset.get("browser_download_url", "")
+                url: str = asset.get("browser_download_url", "")
+                if name.lower().endswith(".zip"):
+                    download_url = url
                     break
+                elif name.lower().endswith(".exe") and not exe_url:
+                    exe_url = url
+            if not download_url:
+                download_url = exe_url
 
             if not download_url:
-                self.error.emit("새 버전이 있지만 다운로드 가능한 exe 파일을 찾을 수 없습니다.")
+                self.error.emit("새 버전이 있지만 다운로드 가능한 파일을 찾을 수 없습니다.")
                 return
 
             self.update_available.emit(tag, changelog, download_url)
@@ -236,8 +244,9 @@ class UpdateDialog(QDialog):
         self._status_label.show()
         self._status_label.setText("다운로드 중...")
 
-        # 임시 경로에 다운로드
-        dest = os.path.join(tempfile.gettempdir(), f"PDFProTool_update_{self._version}.exe")
+        # 임시 경로에 다운로드 (URL 확장자에 맞춤)
+        ext = ".zip" if self._download_url.lower().endswith(".zip") else ".exe"
+        dest = os.path.join(tempfile.gettempdir(), f"PDFProTool_update_{self._version}{ext}")
         self._download_worker = DownloadWorker(self._download_url, dest)
         self._download_worker.progress.connect(self._on_progress)
         self._download_worker.finished.connect(self._on_download_finished)
@@ -279,23 +288,79 @@ class UpdateDialog(QDialog):
 # exe 교체 및 재시작 (bat 스크립트)
 # ─────────────────────────────────────────────
 
-def _apply_update_and_restart(new_exe_path: str):
+def _apply_update_and_restart(downloaded_path: str):
     """
     실행 중인 exe는 자기 자신을 교체할 수 없으므로,
     bat 스크립트를 생성하여:
     1. 현재 프로세스 종료 대기
-    2. 기존 exe를 .old로 백업
-    3. 새 exe를 원래 위치에 복사
+    2. 기존 앱 폴더(또는 exe)를 .old로 백업
+    3. 새 파일을 원래 위치에 복사
     4. 앱 재시작
     5. bat 자기 삭제
+
+    zip 파일인 경우 압축 해제 후 폴더 전체를 교체한다.
     """
     current_exe = sys.executable
+    app_dir = os.path.dirname(current_exe)
     bat_path = os.path.join(tempfile.gettempdir(), "pdfprotool_update.bat")
 
-    bat_content = f"""@echo off
+    if downloaded_path.lower().endswith(".zip"):
+        # zip 압축 해제 → 임시 폴더
+        extract_dir = os.path.join(tempfile.gettempdir(), "PDFProTool_update_extracted")
+        if os.path.exists(extract_dir):
+            shutil.rmtree(extract_dir, ignore_errors=True)
+
+        with zipfile.ZipFile(downloaded_path, "r") as zf:
+            zf.extractall(extract_dir)
+
+        # zip 내부에 단일 폴더(예: PDFProTool/)가 있으면 그 안의 내용을 사용
+        entries = os.listdir(extract_dir)
+        if len(entries) == 1 and os.path.isdir(os.path.join(extract_dir, entries[0])):
+            source_dir = os.path.join(extract_dir, entries[0])
+        else:
+            source_dir = extract_dir
+
+        old_dir = app_dir + ".old"
+
+        bat_content = f"""@echo off
 chcp 65001 >nul
 echo 업데이트 적용 중...
-:: 현재 프로세스 종료 대기 (최대 10초)
+:: 현재 프로세스 종료 대기
+timeout /t 2 /nobreak >nul
+:wait_loop
+tasklist /FI "PID eq {os.getpid()}" 2>nul | find /I "{os.getpid()}" >nul
+if not errorlevel 1 (
+    timeout /t 1 /nobreak >nul
+    goto wait_loop
+)
+
+:: 이전 .old 폴더가 남아있으면 삭제
+if exist "{old_dir}" (
+    rmdir /S /Q "{old_dir}"
+)
+
+:: 기존 앱 폴더를 .old로 이름 변경
+move /Y "{app_dir}" "{old_dir}"
+
+:: 새 폴더를 앱 위치로 이동
+move /Y "{source_dir}" "{app_dir}"
+
+:: 재시작
+start "" "{current_exe}"
+
+:: 임시 파일 정리
+if exist "{downloaded_path}" del /Q "{downloaded_path}"
+if exist "{extract_dir}" rmdir /S /Q "{extract_dir}"
+
+:: bat 자기 삭제
+del "%~f0"
+"""
+    else:
+        # 단일 exe 업데이트 (하위 호환)
+        bat_content = f"""@echo off
+chcp 65001 >nul
+echo 업데이트 적용 중...
+:: 현재 프로세스 종료 대기
 timeout /t 2 /nobreak >nul
 :wait_loop
 tasklist /FI "PID eq {os.getpid()}" 2>nul | find /I "{os.getpid()}" >nul
@@ -310,7 +375,7 @@ if exist "{current_exe}" (
 )
 
 :: 새 exe 복사
-copy /Y "{new_exe_path}" "{current_exe}"
+copy /Y "{downloaded_path}" "{current_exe}"
 
 :: 재시작
 start "" "{current_exe}"
@@ -341,15 +406,24 @@ del "%~f0"
 # ─────────────────────────────────────────────
 
 def cleanup_old_files():
-    """이전 업데이트에서 남은 .old 백업 파일 삭제"""
+    """이전 업데이트에서 남은 .old 백업 파일/폴더 삭제"""
     try:
         exe_path = sys.executable
-        old_path = exe_path + ".old"
-        if os.path.exists(old_path):
-            os.remove(old_path)
-            logger.info(f"이전 백업 파일 삭제: {old_path}")
+        app_dir = os.path.dirname(exe_path)
+
+        # 단일 exe .old 파일 정리
+        old_exe = exe_path + ".old"
+        if os.path.exists(old_exe):
+            os.remove(old_exe)
+            logger.info(f"이전 백업 파일 삭제: {old_exe}")
+
+        # 폴더 .old 정리 (zip 업데이트 후 남은 이전 폴더)
+        old_dir = app_dir + ".old"
+        if os.path.isdir(old_dir):
+            shutil.rmtree(old_dir, ignore_errors=True)
+            logger.info(f"이전 백업 폴더 삭제: {old_dir}")
     except OSError as e:
-        logger.warning(f".old 파일 삭제 실패: {e}")
+        logger.warning(f".old 정리 실패: {e}")
 
 
 # ─────────────────────────────────────────────
