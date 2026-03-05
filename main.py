@@ -23,7 +23,7 @@ except OSError:
     _winmm = None
 
 from PyQt6.QtCore import Qt, QTimer
-from PyQt6.QtGui import QFont
+from PyQt6.QtGui import QFont, QIcon
 from PyQt6.QtWidgets import QApplication
 
 from main_window import MainWindow
@@ -40,6 +40,11 @@ def main():
 
     # Kick off font loading in background immediately (before any UI opens)
     preload_fonts()
+
+    # App icon (찌그러짐 방지: 정사각형 512x512 원본 사용)
+    icon_path = os.path.join(os.path.dirname(__file__), "pdf_icon_512.png")
+    if os.path.exists(icon_path):
+        app.setWindowIcon(QIcon(icon_path))
 
     # Default font
     font = QFont("Segoe UI", 10)
