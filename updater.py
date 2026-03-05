@@ -322,8 +322,6 @@ def _apply_update_and_restart(downloaded_path: str):
         else:
             source_dir = extract_dir
 
-        old_dir = app_dir + ".old"
-
         bat_content = f"""@echo off
 chcp 65001 >nul
 setlocal enabledelayedexpansion
@@ -352,44 +350,21 @@ if not errorlevel 1 (
 )
 echo [%date% %time%] 프로세스 종료 확인 >> "%LOG%"
 
-:: 파일 잠금 해제 대기 (추가 3초)
-ping -n 4 127.0.0.1 >nul 2>&1
+:: 파일 잠금 해제 대기 (추가 5초)
+ping -n 6 127.0.0.1 >nul 2>&1
 
-:: 이전 .old 폴더가 남아있으면 삭제
-if exist "{old_dir}" (
-    rmdir /S /Q "{old_dir}" >nul 2>&1
-    echo [%date% %time%] 이전 .old 폴더 삭제 >> "%LOG%"
-)
-
-:: 기존 앱 폴더를 .old로 이름 변경 (같은 드라이브이므로 move 사용)
-set RETRY=0
-:move_old_loop
-move /Y "{app_dir}" "{old_dir}" >nul 2>&1
-if errorlevel 1 (
-    set /a RETRY+=1
-    if !RETRY! GEQ 10 (
-        echo [%date% %time%] ERROR: 앱 폴더 이름 변경 실패 >> "%LOG%"
-        goto :cleanup_exit
-    )
-    echo [%date% %time%] 앱 폴더 이름 변경 재시도 !RETRY! >> "%LOG%"
-    ping -n 3 127.0.0.1 >nul 2>&1
-    goto move_old_loop
-)
-echo [%date% %time%] 앱 폴더 → .old 이동 완료 >> "%LOG%"
-
-:: 새 폴더를 앱 위치에 복사 (robocopy: 크로스 드라이브 지원, 파일 잠금 재시도)
+:: robocopy /MIR 로 새 파일을 기존 폴더에 직접 덮어씌움
+:: 폴더 이름 변경(move) 없이 파일 단위로 교체 — 잠긴 파일도 개별 재시도
 :: robocopy 종료코드: 0-7 = 성공, 8+ = 오류
-robocopy "{source_dir}" "{app_dir}" /E /R:5 /W:2 /NP >> "%LOG%" 2>&1
+echo [%date% %time%] robocopy /MIR 시작 >> "%LOG%"
+robocopy "{source_dir}" "{app_dir}" /MIR /R:10 /W:3 /NP >> "%LOG%" 2>&1
 set RC=!errorlevel!
 echo [%date% %time%] robocopy 종료코드: !RC! >> "%LOG%"
 if !RC! GEQ 8 (
-    echo [%date% %time%] ERROR: robocopy 실패, 롤백 시도 >> "%LOG%"
-    if exist "{old_dir}" (
-        move /Y "{old_dir}" "{app_dir}" >nul 2>&1
-    )
+    echo [%date% %time%] ERROR: robocopy 실패 (코드 !RC!) >> "%LOG%"
     goto :cleanup_exit
 )
-echo [%date% %time%] 새 폴더 복사 완료 >> "%LOG%"
+echo [%date% %time%] 파일 교체 완료 >> "%LOG%"
 
 :: 재시작
 echo [%date% %time%] 앱 재시작 >> "%LOG%"
