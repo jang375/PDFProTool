@@ -32,6 +32,7 @@ from panels import SearchResultsPanel, StampPanel, TextToolConfig, TextToolPanel
 from pdf_viewer import PDFScrollView
 from sidebar import SidebarWidget, PageGridView
 from ai_manager import AIManager
+from version import __version__
 
 
 # ─────────────────────────────────────────────
@@ -273,7 +274,7 @@ class MainWindow(QMainWindow):
 
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("PDF Pro Tool")
+        self.setWindowTitle(f"PDF Pro Tool v{__version__}")
         self.setMinimumSize(1100, 750)
         self.resize(1280, 860)
 
@@ -495,6 +496,7 @@ class MainWindow(QMainWindow):
         self._pdf_scroll.zoom_changed.connect(self._on_zoom_changed)
         self._pdf_scroll.doc_modified.connect(self._on_doc_modified)
         self._pdf_scroll.annot_edit_requested.connect(self._edit_annot_in_panel)
+        self._pdf_scroll.pdf_widget.text_copied.connect(self._on_text_copied)
 
         self._grid_view = PageGridView()
         self._grid_view.page_selected.connect(self._on_grid_page_selected)
@@ -1797,6 +1799,9 @@ class MainWindow(QMainWindow):
         if tab:
             tab.is_modified = True
             self._update_tab_title(tab)
+
+    def _on_text_copied(self, char_count: int):
+        self._set_status(f"{char_count}자 클립보드에 복사됨")
 
     def _on_doc_changed(self):
         """Called after structural page changes (delete, rotate, etc.)."""

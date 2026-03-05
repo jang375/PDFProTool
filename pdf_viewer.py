@@ -298,6 +298,7 @@ class PDFViewWidget(QWidget):
     zoom_changed = pyqtSignal(float)   # (중복 선언 제거됨)
     doc_modified = pyqtSignal()
     text_placed = pyqtSignal()
+    text_copied = pyqtSignal(int)  # char count copied to clipboard
     annot_edit_requested = pyqtSignal(object, int)  # (annot, page_index)
 
     # Interaction modes
@@ -410,6 +411,12 @@ class PDFViewWidget(QWidget):
         self._crop_start_pos: Optional[QPointF] = None
         self._crop_current_pos: Optional[QPointF] = None
         self._crop_callback: Optional[Callable[[int, fitz.Rect], None]] = None
+
+        # Text selection (drag-to-select + copy)
+        self._text_sel_start: Optional[QPointF] = None  # screen coords of drag start
+        self._text_sel_page: int = -1                    # page where selection started
+        self._text_sel_rect: Optional[fitz.Rect] = None  # selection rect in page coords
+        self._text_sel_text: str = ""                    # extracted text
 
     # ── Document ──────────────────────────────
 
@@ -770,6 +777,13 @@ class PDFViewWidget(QWidget):
                     painter.setPen(QPen(QColor(41, 121, 255, 120), 1))
                     painter.drawRect(hsr)
 
+            # Draw text selection highlight
+            if self._text_sel_rect and self._text_sel_page == i:
+                sr = fitz_rect_to_qrectf(self._text_sel_rect, page_x, page_y, self._zoom)
+                painter.fillRect(sr, QColor(51, 153, 255, 80))
+                painter.setPen(QPen(QColor(51, 153, 255, 180), 1))
+                painter.drawRect(sr)
+
         # Draw crop rectangle
         if self.mode == self.MODE_CROP and self._crop_start_pos and self._crop_current_pos:
             r = QRectF(self._crop_start_pos, self._crop_current_pos).normalized()
@@ -968,6 +982,13 @@ class PDFViewWidget(QWidget):
     def mousePressEvent(self, event: QMouseEvent):
         pos = QPointF(event.position())
 
+        # Clear previous text selection on any click
+        if self._text_sel_rect is not None:
+            self._text_sel_rect = None
+            self._text_sel_text = ""
+            self._text_sel_page = -1
+            self.update()
+
         if self.mode == self.MODE_TEXT_PLACEMENT:
             self._place_text_at(pos)
             return
@@ -1057,6 +1078,16 @@ class PDFViewWidget(QWidget):
             self._selected_page = -1
             for s in self._overlay_stamps:
                 s["selected"] = False
+
+            # Start text selection drag
+            if event.button() == Qt.MouseButton.LeftButton and self._doc:
+                page_index = self.page_at_y(int(pos.y()))
+                if 0 <= page_index < self._doc.page_count:
+                    self._text_sel_start = pos
+                    self._text_sel_page = page_index
+                    self._text_sel_rect = None
+                    self._text_sel_text = ""
+
             self.update()
 
     def mouseDoubleClickEvent(self, event: QMouseEvent):
@@ -1086,6 +1117,18 @@ class PDFViewWidget(QWidget):
 
         if self.mode == self.MODE_TEXT_EDIT:
             self._handle_text_edit_hover(pos)
+            return
+
+        # Text selection drag
+        if self._text_sel_start is not None and self._text_sel_page >= 0:
+            self.setCursor(Qt.CursorShape.IBeamCursor)
+            p1 = self._screen_to_page_coords(self._text_sel_start, self._text_sel_page)
+            p2 = self._screen_to_page_coords(pos, self._text_sel_page)
+            self._text_sel_rect = fitz.Rect(
+                min(p1.x(), p2.x()), min(p1.y(), p2.y()),
+                max(p1.x(), p2.x()), max(p1.y(), p2.y()),
+            )
+            self.update()
             return
 
         if self._drag_annot:
@@ -1202,6 +1245,31 @@ class PDFViewWidget(QWidget):
             self.setCursor(Qt.CursorShape.ArrowCursor)
 
     def mouseReleaseEvent(self, event: QMouseEvent):
+        # Text selection complete
+        if self._text_sel_start is not None:
+            self._text_sel_start = None
+            if self._text_sel_rect and self._doc and 0 <= self._text_sel_page < self._doc.page_count:
+                sel = self._text_sel_rect
+                if sel.width > 5 / self._zoom and sel.height > 5 / self._zoom:
+                    try:
+                        page = self._doc[self._text_sel_page]
+                        text = page.get_textbox(sel).strip()
+                        if text:
+                            self._text_sel_text = text
+                            QApplication.clipboard().setText(text)
+                            self.text_copied.emit(len(text))
+                        else:
+                            self._text_sel_rect = None
+                    except Exception:
+                        self._text_sel_rect = None
+                else:
+                    # Too small — clear selection
+                    self._text_sel_rect = None
+                    self._text_sel_text = ""
+            self.setCursor(Qt.CursorShape.ArrowCursor)
+            self.update()
+            return
+
         if self.mode == self.MODE_CROP and self._crop_start_pos:
             end_pos = QPointF(event.position())
             r = QRectF(self._crop_start_pos, end_pos).normalized()
