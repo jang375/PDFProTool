@@ -326,6 +326,7 @@ def _apply_update_and_restart(downloaded_path: str):
 
         bat_content = f"""@echo off
 chcp 65001 >nul
+setlocal enabledelayedexpansion
 set "LOG={log_path}"
 echo [%date% %time%] 업데이트 시작 (zip 모드) >> "%LOG%"
 echo [%date% %time%] PID={pid} exe="{current_exe}" >> "%LOG%"
@@ -341,7 +342,7 @@ set RETRY=0
 tasklist /FI "PID eq {pid}" 2>nul | find /I "{pid}" >nul
 if not errorlevel 1 (
     set /a RETRY+=1
-    if %RETRY% GEQ 15 (
+    if !RETRY! GEQ 15 (
         echo [%date% %time%] ERROR: 프로세스 종료 대기 타임아웃 >> "%LOG%"
         goto :cleanup_exit
     )
@@ -362,11 +363,11 @@ set RETRY=0
 move /Y "{app_dir}" "{old_dir}" >nul 2>&1
 if errorlevel 1 (
     set /a RETRY+=1
-    if %RETRY% GEQ 5 (
+    if !RETRY! GEQ 5 (
         echo [%date% %time%] ERROR: 앱 폴더 이름 변경 실패 >> "%LOG%"
         goto :cleanup_exit
     )
-    echo [%date% %time%] 앱 폴더 이름 변경 재시도 %RETRY% >> "%LOG%"
+    echo [%date% %time%] 앱 폴더 이름 변경 재시도 !RETRY! >> "%LOG%"
     ping -n 3 127.0.0.1 >nul 2>&1
     goto move_old_loop
 )
@@ -403,6 +404,7 @@ del "%~f0" >nul 2>&1
         # 단일 exe 업데이트 (하위 호환)
         bat_content = f"""@echo off
 chcp 65001 >nul
+setlocal enabledelayedexpansion
 set "LOG={log_path}"
 echo [%date% %time%] 업데이트 시작 (exe 모드) >> "%LOG%"
 echo [%date% %time%] PID={pid} exe="{current_exe}" >> "%LOG%"
@@ -418,7 +420,7 @@ set RETRY=0
 tasklist /FI "PID eq {pid}" 2>nul | find /I "{pid}" >nul
 if not errorlevel 1 (
     set /a RETRY+=1
-    if %RETRY% GEQ 15 (
+    if !RETRY! GEQ 15 (
         echo [%date% %time%] ERROR: 프로세스 종료 대기 타임아웃 >> "%LOG%"
         goto :cleanup_exit
     )
@@ -434,11 +436,11 @@ if exist "{current_exe}" (
     move /Y "{current_exe}" "{current_exe}.old" >nul 2>&1
     if errorlevel 1 (
         set /a RETRY+=1
-        if %RETRY% GEQ 5 (
+        if !RETRY! GEQ 5 (
             echo [%date% %time%] ERROR: exe 백업 실패 >> "%LOG%"
             goto :cleanup_exit
         )
-        echo [%date% %time%] exe 백업 재시도 %RETRY% >> "%LOG%"
+        echo [%date% %time%] exe 백업 재시도 !RETRY! >> "%LOG%"
         ping -n 3 127.0.0.1 >nul 2>&1
         goto move_exe_loop
     )
@@ -488,9 +490,10 @@ del "%~f0" >nul 2>&1
     app = QApplication.instance()
     if app:
         app.quit()
-    # Qt가 즉시 종료하지 않을 수 있으므로 강제 종료
-    from PyQt6.QtCore import QTimer
-    QTimer.singleShot(1000, lambda: os._exit(0))
+    # Qt가 즉시 종료하지 않을 수 있으므로 짧은 대기 후 강제 종료
+    import time
+    time.sleep(0.5)
+    os._exit(0)
 
 
 # ─────────────────────────────────────────────
