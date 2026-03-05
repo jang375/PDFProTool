@@ -415,8 +415,9 @@ class PDFViewWidget(QWidget):
         # Text selection (drag-to-select + copy)
         self._text_sel_start: Optional[QPointF] = None  # screen coords of drag start
         self._text_sel_page: int = -1                    # page where selection started
-        self._text_sel_rect: Optional[fitz.Rect] = None  # selection rect in page coords
+        self._text_sel_rects: list[fitz.Rect] = []       # per-word highlight rects (page coords)
         self._text_sel_text: str = ""                    # extracted text
+        self._text_sel_words: list = []                  # cached words for current page
 
     # ── Document ──────────────────────────────
 
@@ -777,12 +778,12 @@ class PDFViewWidget(QWidget):
                     painter.setPen(QPen(QColor(41, 121, 255, 120), 1))
                     painter.drawRect(hsr)
 
-            # Draw text selection highlight
-            if self._text_sel_rect and self._text_sel_page == i:
-                sr = fitz_rect_to_qrectf(self._text_sel_rect, page_x, page_y, self._zoom)
-                painter.fillRect(sr, QColor(51, 153, 255, 80))
-                painter.setPen(QPen(QColor(51, 153, 255, 180), 1))
-                painter.drawRect(sr)
+            # Draw text selection highlight (per-word)
+            if self._text_sel_rects and self._text_sel_page == i:
+                sel_color = QColor(51, 153, 255, 80)
+                for wr in self._text_sel_rects:
+                    sr = fitz_rect_to_qrectf(wr, page_x, page_y, self._zoom)
+                    painter.fillRect(sr, sel_color)
 
         # Draw crop rectangle
         if self.mode == self.MODE_CROP and self._crop_start_pos and self._crop_current_pos:
@@ -983,10 +984,11 @@ class PDFViewWidget(QWidget):
         pos = QPointF(event.position())
 
         # Clear previous text selection on any click
-        if self._text_sel_rect is not None:
-            self._text_sel_rect = None
+        if self._text_sel_rects:
+            self._text_sel_rects = []
             self._text_sel_text = ""
             self._text_sel_page = -1
+            self._text_sel_words = []
             self.update()
 
         if self.mode == self.MODE_TEXT_PLACEMENT:
@@ -1085,8 +1087,13 @@ class PDFViewWidget(QWidget):
                 if 0 <= page_index < self._doc.page_count:
                     self._text_sel_start = pos
                     self._text_sel_page = page_index
-                    self._text_sel_rect = None
+                    self._text_sel_rects = []
                     self._text_sel_text = ""
+                    # Cache words for the page (x0, y0, x1, y1, word, block, line, word_no)
+                    try:
+                        self._text_sel_words = self._doc[page_index].get_text("words")
+                    except Exception:
+                        self._text_sel_words = []
 
             self.update()
 
@@ -1119,15 +1126,33 @@ class PDFViewWidget(QWidget):
             self._handle_text_edit_hover(pos)
             return
 
-        # Text selection drag
+        # Text selection drag — word-level highlight following text flow
         if self._text_sel_start is not None and self._text_sel_page >= 0:
             self.setCursor(Qt.CursorShape.IBeamCursor)
             p1 = self._screen_to_page_coords(self._text_sel_start, self._text_sel_page)
             p2 = self._screen_to_page_coords(pos, self._text_sel_page)
-            self._text_sel_rect = fitz.Rect(
-                min(p1.x(), p2.x()), min(p1.y(), p2.y()),
-                max(p1.x(), p2.x()), max(p1.y(), p2.y()),
-            )
+            self._text_sel_rects = []
+            if self._text_sel_words:
+                # Find words between drag start and current pos (reading order)
+                start_pt = (p1.x(), p1.y())
+                end_pt = (p2.x(), p2.y())
+                # Swap if dragging upward
+                if start_pt[1] > end_pt[1] or (abs(start_pt[1] - end_pt[1]) < 5 and start_pt[0] > end_pt[0]):
+                    start_pt, end_pt = end_pt, start_pt
+                sel_rects = []
+                for w in self._text_sel_words:
+                    wx0, wy0, wx1, wy1 = w[:4]
+                    wmid_y = (wy0 + wy1) / 2
+                    wmid_x = (wx0 + wx1) / 2
+                    # Word is "after" start point: on a later line, or same line & right of start
+                    after_start = (wmid_y > start_pt[1] + (wy1 - wy0) * 0.3) or \
+                                  (abs(wmid_y - start_pt[1]) <= (wy1 - wy0) * 0.7 and wmid_x >= start_pt[0])
+                    # Word is "before" end point: on an earlier line, or same line & left of end
+                    before_end = (wmid_y < end_pt[1] - (wy1 - wy0) * 0.3) or \
+                                 (abs(wmid_y - end_pt[1]) <= (wy1 - wy0) * 0.7 and wmid_x <= end_pt[0])
+                    if after_start and before_end:
+                        sel_rects.append(fitz.Rect(wx0, wy0, wx1, wy1))
+                self._text_sel_rects = sel_rects
             self.update()
             return
 
@@ -1248,24 +1273,38 @@ class PDFViewWidget(QWidget):
         # Text selection complete
         if self._text_sel_start is not None:
             self._text_sel_start = None
-            if self._text_sel_rect and self._doc and 0 <= self._text_sel_page < self._doc.page_count:
-                sel = self._text_sel_rect
-                if sel.width > 5 / self._zoom and sel.height > 5 / self._zoom:
-                    try:
-                        page = self._doc[self._text_sel_page]
-                        text = page.get_textbox(sel).strip()
-                        if text:
-                            self._text_sel_text = text
-                            QApplication.clipboard().setText(text)
-                            self.text_copied.emit(len(text))
-                        else:
-                            self._text_sel_rect = None
-                    except Exception:
-                        self._text_sel_rect = None
-                else:
-                    # Too small — clear selection
-                    self._text_sel_rect = None
-                    self._text_sel_text = ""
+            if self._text_sel_rects and self._doc and 0 <= self._text_sel_page < self._doc.page_count:
+                # Build text from selected word rects
+                try:
+                    page = self._doc[self._text_sel_page]
+                    lines: list[list[str]] = []
+                    cur_line_words: list[str] = []
+                    prev_y = None
+                    for r in self._text_sel_rects:
+                        text = page.get_textbox(r).strip()
+                        if not text:
+                            continue
+                        mid_y = (r.y0 + r.y1) / 2
+                        if prev_y is not None and abs(mid_y - prev_y) > (r.y1 - r.y0) * 0.5:
+                            if cur_line_words:
+                                lines.append(cur_line_words)
+                            cur_line_words = []
+                        cur_line_words.append(text)
+                        prev_y = mid_y
+                    if cur_line_words:
+                        lines.append(cur_line_words)
+                    full_text = "\n".join(" ".join(ws) for ws in lines).strip()
+                    if full_text:
+                        self._text_sel_text = full_text
+                        QApplication.clipboard().setText(full_text)
+                        self.text_copied.emit(len(full_text))
+                    else:
+                        self._text_sel_rects = []
+                except Exception:
+                    self._text_sel_rects = []
+            else:
+                self._text_sel_rects = []
+                self._text_sel_text = ""
             self.setCursor(Qt.CursorShape.ArrowCursor)
             self.update()
             return
