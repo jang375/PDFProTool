@@ -331,10 +331,11 @@ set "LOG={log_path}"
 echo [%date% %time%] 업데이트 시작 (zip 모드) >> "%LOG%"
 echo [%date% %time%] PID={pid} exe="{current_exe}" >> "%LOG%"
 echo [%date% %time%] source="{source_dir}" >> "%LOG%"
+echo [%date% %time%] app_dir="{app_dir}" >> "%LOG%"
 
-:: 프로세스 강제 종료 후 대기 (ping은 콘솔 없이도 동작)
+:: 프로세스 강제 종료 후 대기
 taskkill /PID {pid} /F >nul 2>&1
-ping -n 4 127.0.0.1 >nul 2>&1
+ping -n 5 127.0.0.1 >nul 2>&1
 
 :: 프로세스 완전 종료 대기 (최대 15초)
 set RETRY=0
@@ -351,19 +352,22 @@ if not errorlevel 1 (
 )
 echo [%date% %time%] 프로세스 종료 확인 >> "%LOG%"
 
+:: 파일 잠금 해제 대기 (추가 3초)
+ping -n 4 127.0.0.1 >nul 2>&1
+
 :: 이전 .old 폴더가 남아있으면 삭제
 if exist "{old_dir}" (
     rmdir /S /Q "{old_dir}" >nul 2>&1
     echo [%date% %time%] 이전 .old 폴더 삭제 >> "%LOG%"
 )
 
-:: 기존 앱 폴더를 .old로 이름 변경 (재시도 포함)
+:: 기존 앱 폴더를 .old로 이름 변경 (같은 드라이브이므로 move 사용)
 set RETRY=0
 :move_old_loop
 move /Y "{app_dir}" "{old_dir}" >nul 2>&1
 if errorlevel 1 (
     set /a RETRY+=1
-    if !RETRY! GEQ 5 (
+    if !RETRY! GEQ 10 (
         echo [%date% %time%] ERROR: 앱 폴더 이름 변경 실패 >> "%LOG%"
         goto :cleanup_exit
     )
@@ -373,14 +377,19 @@ if errorlevel 1 (
 )
 echo [%date% %time%] 앱 폴더 → .old 이동 완료 >> "%LOG%"
 
-:: 새 폴더를 앱 위치로 이동
-move /Y "{source_dir}" "{app_dir}" >nul 2>&1
-if errorlevel 1 (
-    echo [%date% %time%] ERROR: 새 폴더 이동 실패, 롤백 시도 >> "%LOG%"
-    move /Y "{old_dir}" "{app_dir}" >nul 2>&1
+:: 새 폴더를 앱 위치에 복사 (robocopy: 크로스 드라이브 지원, 파일 잠금 재시도)
+:: robocopy 종료코드: 0-7 = 성공, 8+ = 오류
+robocopy "{source_dir}" "{app_dir}" /E /R:5 /W:2 /NP >> "%LOG%" 2>&1
+set RC=!errorlevel!
+echo [%date% %time%] robocopy 종료코드: !RC! >> "%LOG%"
+if !RC! GEQ 8 (
+    echo [%date% %time%] ERROR: robocopy 실패, 롤백 시도 >> "%LOG%"
+    if exist "{old_dir}" (
+        move /Y "{old_dir}" "{app_dir}" >nul 2>&1
+    )
     goto :cleanup_exit
 )
-echo [%date% %time%] 새 폴더 이동 완료 >> "%LOG%"
+echo [%date% %time%] 새 폴더 복사 완료 >> "%LOG%"
 
 :: 재시작
 echo [%date% %time%] 앱 재시작 >> "%LOG%"
