@@ -13,7 +13,7 @@ from PyQt6.QtWidgets import (
     QApplication, QColorDialog, QComboBox, QDoubleSpinBox, QFileDialog, QFrame,
     QGridLayout, QGroupBox, QHBoxLayout, QInputDialog, QLabel,
     QLineEdit, QListWidget, QListWidgetItem, QPlainTextEdit, QPushButton, QScrollArea,
-    QSizePolicy, QSlider, QSplitter, QTextEdit, QToolButton, QVBoxLayout,
+    QSizePolicy, QSlider, QSplitter, QTextBrowser, QTextEdit, QToolButton, QVBoxLayout,
     QWidget,
 )
 
@@ -872,6 +872,7 @@ class AIToolPanel(QWidget):
     def append_chat_message(self, sender: str, msg: str):
         is_user = "👤" in sender
         is_error = "❌" in sender
+        is_ai = not is_user and not is_error
 
         row = QWidget()
         row.setStyleSheet("background: transparent;")
@@ -879,39 +880,52 @@ class AIToolPanel(QWidget):
         row_layout.setContentsMargins(0, 0, 0, 0)
         row_layout.setSpacing(0)
 
-        bubble = QLabel(msg)
-        bubble.setWordWrap(True)
-        bubble.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
-
-        if is_user:
-            # 사용자 메시지: 오른쪽 정렬, 뷰포트 너비 기준 최대 80%
-            bubble.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Minimum)
-            vp_w = self._chat_scroll.viewport().width()
-            if vp_w > 0:
-                bubble.setMaximumWidth(int(vp_w * 0.80))
-            bubble.setStyleSheet(
-                "background: #DCF8C6; border-radius: 12px; padding: 8px 12px;"
-                " color: #1b5e20; font-size: 12px; font-weight: normal;"
-            )
-            row_layout.addStretch()
-            row_layout.addWidget(bubble)
-        elif is_error:
-            # 오류: 전체 너비 사용
+        if is_ai:
+            # AI 메시지: QTextBrowser로 마크다운 렌더링
+            bubble = QTextBrowser()
+            bubble.setOpenExternalLinks(True)
+            bubble.setMarkdown(msg)
             bubble.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
-            bubble.setText(f"{sender}: {msg}")
             bubble.setStyleSheet(
-                "background: #FFEBEE; border-radius: 12px; padding: 8px 12px;"
-                " color: #b71c1c; font-size: 12px; font-weight: normal;"
+                "QTextBrowser { background: #E3F2FD; border-radius: 12px; padding: 8px 12px;"
+                " color: #1a237e; font-size: 12px; font-weight: normal; border: none; }"
             )
+            # Auto-resize height to content
+            bubble.document().setDocumentMargin(4)
+            def _resize_browser(b=bubble):
+                try:
+                    doc_h = b.document().size().height()
+                    b.setFixedHeight(int(doc_h) + 16)
+                except RuntimeError:
+                    pass
+            bubble.document().contentsChanged.connect(_resize_browser)
+            _resize_browser()
             row_layout.addWidget(bubble)
         else:
-            # AI 메시지: 전체 너비 사용 (잘림 없음)
-            bubble.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
-            bubble.setStyleSheet(
-                "background: #E3F2FD; border-radius: 12px; padding: 8px 12px;"
-                " color: #1a237e; font-size: 12px; font-weight: normal;"
-            )
-            row_layout.addWidget(bubble)
+            bubble = QLabel(msg)
+            bubble.setWordWrap(True)
+            bubble.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+
+            if is_user:
+                bubble.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Minimum)
+                vp_w = self._chat_scroll.viewport().width()
+                if vp_w > 0:
+                    bubble.setMaximumWidth(int(vp_w * 0.80))
+                bubble.setStyleSheet(
+                    "background: #DCF8C6; border-radius: 12px; padding: 8px 12px;"
+                    " color: #1b5e20; font-size: 12px; font-weight: normal;"
+                )
+                row_layout.addStretch()
+                row_layout.addWidget(bubble)
+            else:
+                # 오류
+                bubble.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+                bubble.setText(f"{sender}: {msg}")
+                bubble.setStyleSheet(
+                    "background: #FFEBEE; border-radius: 12px; padding: 8px 12px;"
+                    " color: #b71c1c; font-size: 12px; font-weight: normal;"
+                )
+                row_layout.addWidget(bubble)
 
         # Insert before the trailing stretch
         self._chat_msg_layout.insertWidget(self._chat_msg_layout.count() - 1, row)

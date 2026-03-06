@@ -288,15 +288,101 @@ class UpdateDialog(QDialog):
 # exe 교체 및 재시작 (bat 스크립트)
 # ─────────────────────────────────────────────
 
+def _create_update_progress_vbs(version: str) -> str:
+    """업데이트 진행 중임을 사용자에게 알리는 VBS 팝업 스크립트를 생성한다.
+
+    bat 스크립트에서 wscript로 실행하면 GUI 팝업이 표시되어
+    사용자가 프로그램이 꺼진 줄 알고 다시 실행하는 것을 방지한다.
+    업데이트 완료 후 bat에서 taskkill로 닫는다.
+    """
+    vbs_path = os.path.join(tempfile.gettempdir(), "pdfprotool_update_progress.vbs")
+    # HTA(HTML Application)로 커스텀 UI 표시 — 타이틀바, 크기, 위치 제어 가능
+    hta_path = os.path.join(tempfile.gettempdir(), "pdfprotool_update_progress.hta")
+
+    hta_content = """<html>
+<head>
+<title>PDF Pro Tool 업데이트</title>
+<HTA:APPLICATION
+  ID="UpdateProgress"
+  BORDER="thin"
+  BORDERSTYLE="normal"
+  CAPTION="yes"
+  MAXIMIZEBUTTON="no"
+  MINIMIZEBUTTON="no"
+  SYSMENU="no"
+  SCROLL="no"
+  SINGLEINSTANCE="yes"
+  WINDOWSTATE="normal"
+/>
+<style>
+body { font-family: 'Segoe UI', sans-serif; background: #f0f4ff; margin: 0; padding: 30px 40px; text-align: center; overflow: hidden; }
+h2 { color: #1565C0; margin-bottom: 8px; font-size: 18px; }
+p { color: #555; font-size: 13px; line-height: 1.6; margin: 8px 0; }
+.version { color: #2979FF; font-weight: bold; }
+.spinner { margin: 20px auto; width: 40px; height: 40px; border: 4px solid #e0e0e0; border-top: 4px solid #2979FF; border-radius: 50%; animation: spin 1s linear infinite; }
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+.warning { color: #e65100; font-size: 12px; margin-top: 16px; background: #FFF3E0; padding: 8px 12px; border-radius: 6px; }
+</style>
+<script>
+window.resizeTo(420, 300);
+window.moveTo((screen.width - 420) / 2, (screen.height - 300) / 2);
+</script>
+</head>
+<body>
+<div class="spinner"></div>
+<h2>업데이트 설치 중...</h2>
+<p><span class="version">v""" + version + """</span> 버전을 설치하고 있습니다.</p>
+<p>완료되면 프로그램이 자동으로 다시 시작됩니다.</p>
+<div class="warning">이 창이 닫힐 때까지 프로그램을 실행하지 마세요.</div>
+</body>
+</html>"""
+
+    with open(hta_path, "w", encoding="utf-8") as f:
+        f.write(hta_content)
+
+    return hta_path
+
+
+# ─────────────────────────────────────────────
+# 업데이트 잠금 파일 (중복 실행 방지)
+# ─────────────────────────────────────────────
+
+UPDATE_LOCK_PATH = os.path.join(tempfile.gettempdir(), "pdfprotool_updating.lock")
+
+
+def is_update_in_progress() -> bool:
+    """업데이트가 진행 중인지 확인 (잠금 파일 + HTA 프로세스)"""
+    if not os.path.exists(UPDATE_LOCK_PATH):
+        return False
+    # 잠금 파일이 있으면 HTA가 실행 중인지 확인
+    try:
+        result = subprocess.run(
+            ["tasklist", "/FI", "IMAGENAME eq mshta.exe"],
+            capture_output=True, text=True, timeout=5,
+            creationflags=subprocess.CREATE_NO_WINDOW,
+        )
+        if "mshta.exe" in result.stdout:
+            return True
+    except Exception:
+        pass
+    # HTA가 없으면 잠금 파일이 잔여물 — 삭제
+    try:
+        os.remove(UPDATE_LOCK_PATH)
+    except OSError:
+        pass
+    return False
+
+
 def _apply_update_and_restart(downloaded_path: str):
     """
     실행 중인 exe는 자기 자신을 교체할 수 없으므로,
     bat 스크립트를 생성하여:
-    1. 현재 프로세스 종료 대기
-    2. 기존 앱 폴더(또는 exe)를 .old로 백업
-    3. 새 파일을 원래 위치에 복사
-    4. 앱 재시작
-    5. bat 자기 삭제
+    1. "업데이트 중" 안내 팝업 표시
+    2. 현재 프로세스 종료 대기
+    3. 기존 앱 폴더(또는 exe)를 .old로 백업
+    4. 새 파일을 원래 위치에 복사
+    5. 팝업 닫기 + 앱 재시작
+    6. bat 자기 삭제
 
     zip 파일인 경우 압축 해제 후 폴더 전체를 교체한다.
     """
@@ -305,6 +391,53 @@ def _apply_update_and_restart(downloaded_path: str):
     bat_path = os.path.join(tempfile.gettempdir(), "pdfprotool_update.bat")
     log_path = os.path.join(tempfile.gettempdir(), "pdfprotool_update.log")
     pid = os.getpid()
+
+    # 업데이트 진행 중 안내 팝업 HTA 생성
+    hta_path = _create_update_progress_vbs(__version__)
+    lock_path = UPDATE_LOCK_PATH
+
+    # 공통 bat 헤더: 잠금 파일 생성 + 안내 팝업 표시
+    bat_header = f"""@echo off
+chcp 65001 >nul
+setlocal enabledelayedexpansion
+set "LOG={log_path}"
+set "LOCK={lock_path}"
+
+:: 업데이트 잠금 파일 생성 (중복 실행 방지)
+echo updating > "%LOCK%"
+
+:: 업데이트 안내 팝업 표시 (비동기)
+start "" mshta.exe "{hta_path}"
+"""
+
+    # 공통 bat 꼬리: 팝업 닫기 + 잠금 해제 + bat 자기 삭제
+    bat_footer = f"""
+:: 안내 팝업 닫기
+taskkill /F /IM mshta.exe >nul 2>&1
+if exist "{hta_path}" del /Q "{hta_path}" >nul 2>&1
+
+:: 잠금 파일 삭제
+if exist "%LOCK%" del /Q "%LOCK%" >nul 2>&1
+
+:: 재시작
+echo [%date% %time%] 앱 재시작 >> "%LOG%"
+start "" "{current_exe}"
+
+:: 임시 파일 정리
+"""
+
+    bat_footer_fail = f"""
+:: 안내 팝업 닫기
+taskkill /F /IM mshta.exe >nul 2>&1
+if exist "{hta_path}" del /Q "{hta_path}" >nul 2>&1
+
+:: 잠금 파일 삭제
+if exist "%LOCK%" del /Q "%LOCK%" >nul 2>&1
+
+echo [%date% %time%] 업데이트 실패 — 앱을 수동으로 재시작하세요. >> "%LOG%"
+:: 원본이 남아있으면 재시작 시도
+if exist "{current_exe}" start "" "{current_exe}"
+"""
 
     if downloaded_path.lower().endswith(".zip"):
         # zip 압축 해제 → 임시 폴더
@@ -322,10 +455,7 @@ def _apply_update_and_restart(downloaded_path: str):
         else:
             source_dir = extract_dir
 
-        bat_content = f"""@echo off
-chcp 65001 >nul
-setlocal enabledelayedexpansion
-set "LOG={log_path}"
+        bat_content = bat_header + f"""
 echo [%date% %time%] 업데이트 시작 (zip 모드) >> "%LOG%"
 echo [%date% %time%] PID={pid} exe="{current_exe}" >> "%LOG%"
 echo [%date% %time%] source="{source_dir}" >> "%LOG%"
@@ -354,8 +484,6 @@ echo [%date% %time%] 프로세스 종료 확인 >> "%LOG%"
 ping -n 6 127.0.0.1 >nul 2>&1
 
 :: robocopy /MIR 로 새 파일을 기존 폴더에 직접 덮어씌움
-:: 폴더 이름 변경(move) 없이 파일 단위로 교체 — 잠긴 파일도 개별 재시도
-:: robocopy 종료코드: 0-7 = 성공, 8+ = 오류
 echo [%date% %time%] robocopy /MIR 시작 >> "%LOG%"
 robocopy "{source_dir}" "{app_dir}" /MIR /R:10 /W:3 /NP >> "%LOG%" 2>&1
 set RC=!errorlevel!
@@ -365,36 +493,25 @@ if !RC! GEQ 8 (
     goto :cleanup_exit
 )
 echo [%date% %time%] 파일 교체 완료 >> "%LOG%"
-
-:: 재시작
-echo [%date% %time%] 앱 재시작 >> "%LOG%"
-start "" "{current_exe}"
-
-:: 임시 파일 정리
+""" + bat_footer + f"""
 if exist "{downloaded_path}" del /Q "{downloaded_path}" >nul 2>&1
 if exist "{extract_dir}" rmdir /S /Q "{extract_dir}" >nul 2>&1
 echo [%date% %time%] 업데이트 완료! >> "%LOG%"
 goto :eof
 
 :cleanup_exit
-echo [%date% %time%] 업데이트 실패 — 앱을 수동으로 재시작하세요. >> "%LOG%"
-:: 원본이 남아있으면 재시작 시도
-if exist "{current_exe}" start "" "{current_exe}"
-
+""" + bat_footer_fail + f"""
 :eof
 del "%~f0" >nul 2>&1
 """
     else:
         # 단일 exe 업데이트 (하위 호환)
-        bat_content = f"""@echo off
-chcp 65001 >nul
-setlocal enabledelayedexpansion
-set "LOG={log_path}"
+        bat_content = bat_header + f"""
 echo [%date% %time%] 업데이트 시작 (exe 모드) >> "%LOG%"
 echo [%date% %time%] PID={pid} exe="{current_exe}" >> "%LOG%"
 echo [%date% %time%] source="{downloaded_path}" >> "%LOG%"
 
-:: 프로세스 강제 종료 후 대기 (ping은 콘솔 없이도 동작)
+:: 프로세스 강제 종료 후 대기
 taskkill /PID {pid} /F >nul 2>&1
 ping -n 4 127.0.0.1 >nul 2>&1
 
@@ -439,17 +556,12 @@ if errorlevel 1 (
     goto :cleanup_exit
 )
 echo [%date% %time%] exe 복사 완료 >> "%LOG%"
-
-:: 재시작
-echo [%date% %time%] 앱 재시작 >> "%LOG%"
-start "" "{current_exe}"
+""" + bat_footer + f"""
 echo [%date% %time%] 업데이트 완료! >> "%LOG%"
 goto :eof
 
 :cleanup_exit
-echo [%date% %time%] 업데이트 실패 — 앱을 수동으로 재시작하세요. >> "%LOG%"
-if exist "{current_exe}" start "" "{current_exe}"
-
+""" + bat_footer_fail + f"""
 :eof
 del "%~f0" >nul 2>&1
 """

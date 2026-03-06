@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Optional
 
 import fitz  # PyMuPDF
-from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QThread
+from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QThread, QSettings, QByteArray, QSize
 from PyQt6.QtGui import (
     QAction, QColor, QFont, QIcon, QKeySequence, QShortcut,
 )
@@ -32,6 +32,7 @@ from panels import SearchResultsPanel, StampPanel, TextToolConfig, TextToolPanel
 from pdf_viewer import PDFScrollView
 from sidebar import SidebarWidget, PageGridView
 from ai_manager import AIManager
+from icons import icon as svg_icon
 from version import __version__
 
 
@@ -40,46 +41,72 @@ from version import __version__
 # ─────────────────────────────────────────────
 
 class SettingsDialog(QDialog):
+    theme_changed = pyqtSignal(bool)  # is_dark
+
     def __init__(self, ai_manager: AIManager, parent=None):
         super().__init__(parent)
         self.setWindowTitle("환경설정")
         self.ai_manager = ai_manager
-        
+        self._settings = ai_manager.settings
+
         self.setMinimumWidth(400)
         vl = QVBoxLayout(self)
-        
-        # Gemini API Key section
+
+        # ── Theme section ──
+        from PyQt6.QtWidgets import QCheckBox
+        theme_frame = QFrame()
+        theme_frame.setStyleSheet("background: white; border-radius: 5px; border: 1px solid #d0d0d0;")
+        tf_layout = QVBoxLayout(theme_frame)
+
+        theme_lbl = QLabel("테마:")
+        theme_lbl.setStyleSheet("font-weight: bold; border: none;")
+        tf_layout.addWidget(theme_lbl)
+
+        self._dark_mode_cb = QCheckBox("다크 모드")
+        self._dark_mode_cb.setStyleSheet("border: none;")
+        self._dark_mode_cb.setChecked(self._settings.value("dark_mode", False, type=bool))
+        tf_layout.addWidget(self._dark_mode_cb)
+        vl.addWidget(theme_frame)
+
+        vl.addSpacing(8)
+
+        # ── Gemini API Key section ──
         gb = QFrame()
         gb.setStyleSheet("background: white; border-radius: 5px; border: 1px solid #d0d0d0;")
         gb_layout = QVBoxLayout(gb)
-        
+
         lbl = QLabel("Gemini API Key:")
         lbl.setStyleSheet("font-weight: bold; border: none;")
         gb_layout.addWidget(lbl)
-        
+
         self.api_key_input = QLineEdit()
         self.api_key_input.setEchoMode(QLineEdit.EchoMode.PasswordEchoOnEdit)
         self.api_key_input.setText(self.ai_manager.settings.value("gemini_api_key", "", type=str))
         self.api_key_input.setPlaceholderText("API 키를 입력하세요...")
         self.api_key_input.setStyleSheet("padding: 4px; border: 1px solid #ccc; border-radius: 3px;")
         gb_layout.addWidget(self.api_key_input)
-        
+
         desc = QLabel("Gemini 2.5 Flash 모델을 사용하여 표 추출, 요약, 오타 교정 기능을 제공합니다. 무료 등급에서도 충분히 활용 가능합니다.")
         desc.setWordWrap(True)
         desc.setStyleSheet("font-size: 11px; color: #666; border: none;")
         gb_layout.addWidget(desc)
-        
+
         vl.addWidget(gb)
         vl.addStretch()
-        
+
         btns = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
         btns.accepted.connect(self.accept)
         btns.rejected.connect(self.reject)
         vl.addWidget(btns)
-        
+
     def accept(self):
         new_key = self.api_key_input.text().strip()
         self.ai_manager.update_api_key(new_key)
+
+        is_dark = self._dark_mode_cb.isChecked()
+        self._settings.setValue("dark_mode", is_dark)
+        self.theme_changed.emit(is_dark)
+
         super().accept()
 
 
@@ -89,9 +116,13 @@ class SettingsDialog(QDialog):
 
 # ─────────────────────────────────────────────
 
-def make_tool_button(text: str, tooltip: str) -> QToolButton:
+def make_tool_button(text: str, tooltip: str, icon_name: str = "") -> QToolButton:
     btn = QToolButton()
-    btn.setText(text)
+    if icon_name:
+        btn.setIcon(svg_icon(icon_name, 18))
+        btn.setIconSize(QSize(18, 18))
+    else:
+        btn.setText(text)
     btn.setToolTip(tooltip)
     btn.setFixedSize(36, 32)
     btn.setStyleSheet(
@@ -278,6 +309,9 @@ class MainWindow(QMainWindow):
         self.setMinimumSize(1100, 750)
         self.resize(1280, 860)
 
+        # Settings
+        self._settings = QSettings("PDFProTool", "Settings")
+
         # Managers
         self._stamp_mgr = StampManager()
         self._bookmark_mgr = BookmarkManager()
@@ -297,9 +331,13 @@ class MainWindow(QMainWindow):
         self._split_end: int = 1
 
         self._build_ui()
+        self._build_welcome_page()
         self._connect_signals()
         self._update_toolbar_state()
         self.setAcceptDrops(True)
+        self._restore_window_state()
+        # Delay welcome page update so layout is finalized
+        QTimer.singleShot(0, self._update_welcome_page)
 
     # ── Worker lifecycle helper ───────────────
     @staticmethod
@@ -378,11 +416,11 @@ class MainWindow(QMainWindow):
         tb_layout.addStretch()
         
         # File ops
-        open_btn = make_tool_button("📂", "열기")
+        open_btn = make_tool_button("📂", "열기 (Ctrl+O)", "folder-open")
         open_btn.clicked.connect(self._open_file)
         tb_layout.addWidget(open_btn)
 
-        save_btn = make_tool_button("💾", "저장")
+        save_btn = make_tool_button("💾", "저장 (Ctrl+S)", "save")
         save_btn.clicked.connect(self._save_file)
         tb_layout.addWidget(save_btn)
 
@@ -390,9 +428,11 @@ class MainWindow(QMainWindow):
 
         # ── Tools ──
         
-        def make_topbar_btn(text, icon_text, callback=None):
+        def make_topbar_btn(text, icon_name, callback=None):
             from PyQt6.QtGui import QCursor
-            btn = QPushButton(f"{icon_text} {text}")
+            btn = QPushButton(f"  {text}")
+            btn.setIcon(svg_icon(icon_name, 16))
+            btn.setIconSize(QSize(16, 16))
             btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
             btn.setStyleSheet(
                 "QPushButton { padding: 6px 10px; font-size: 12px; color: #444; border: 1px solid transparent; background: transparent; border-radius: 4px; margin: 0px; }"
@@ -401,15 +441,16 @@ class MainWindow(QMainWindow):
             if callback:
                 btn.clicked.connect(callback)
             return btn
-            
-        self._text_edit_btn = make_topbar_btn("텍스트 편집", "✏", self._toggle_text_edit_mode)
+
+        self._text_edit_btn = make_topbar_btn("텍스트 편집", "pencil", self._toggle_text_edit_mode)
         tb_layout.addWidget(self._text_edit_btn)
-        tb_layout.addWidget(make_topbar_btn("텍스트 추가", "T", self._add_text))
-        tb_layout.addWidget(make_topbar_btn("직인 추가", "🖋", self._show_stamp_panel))
-        tb_layout.addWidget(make_topbar_btn("파일 결합", "⊕", self._merge_pdfs))
-        tb_layout.addWidget(make_topbar_btn("페이지 구성", "⊞", self._insert_pdf))
-        tb_layout.addWidget(make_topbar_btn("스캔/OCR", "👁", self._show_ocr_dialog))
-        tb_layout.addWidget(make_topbar_btn("AI", "✨", self._show_ai_panel))
+        tb_layout.addWidget(make_topbar_btn("텍스트 추가", "type", self._add_text))
+        tb_layout.addWidget(make_topbar_btn("직인 추가", "stamp", self._show_stamp_panel))
+        tb_layout.addWidget(make_topbar_btn("파일 결합", "merge", self._merge_pdfs))
+        self._grid_view_btn = make_topbar_btn("페이지 구성", "layout", self._toggle_grid_view)
+        tb_layout.addWidget(self._grid_view_btn)
+        tb_layout.addWidget(make_topbar_btn("스캔/OCR", "scan", self._show_ocr_dialog))
+        tb_layout.addWidget(make_topbar_btn("AI", "sparkles", self._show_ai_panel))
 
         tb_layout.addWidget(make_divider())
         tb_layout.addStretch()
@@ -431,9 +472,13 @@ class MainWindow(QMainWindow):
         self._search_input.returnPressed.connect(self._perform_search)
         sl.addWidget(self._search_input)
         
-        search_icon = QLabel("🔍")
-        search_icon.setStyleSheet("border: none; font-size: 12px; color: #888;")
-        sl.addWidget(search_icon)
+        search_icon_btn = QToolButton()
+        search_icon_btn.setIcon(svg_icon("search", 14, "#888"))
+        search_icon_btn.setIconSize(QSize(14, 14))
+        search_icon_btn.setFixedSize(20, 20)
+        search_icon_btn.setStyleSheet("QToolButton { border: none; background: transparent; }")
+        search_icon_btn.clicked.connect(self._perform_search)
+        sl.addWidget(search_icon_btn)
 
         _nav_btn_style = (
             "QPushButton { padding: 0px 2px; font-size: 12px; font-weight: bold; border: none; background: transparent; color: #666; }"
@@ -458,7 +503,7 @@ class MainWindow(QMainWindow):
         tb_layout.addSpacing(5)
 
         # Settings
-        settings_btn = make_tool_button("⚙", "설정")
+        settings_btn = make_tool_button("⚙", "설정", "settings")
         settings_btn.clicked.connect(self._show_settings)
         tb_layout.addWidget(settings_btn)
 
@@ -519,18 +564,18 @@ class MainWindow(QMainWindow):
         bt_hl.addWidget(self._status_label)
         bt_hl.addStretch()
 
-        delete_btn = make_tool_button("🗑", "현재 페이지 삭제")
+        delete_btn = make_tool_button("🗑", "현재 페이지 삭제 (Del)", "trash")
         delete_btn.clicked.connect(self._delete_current_page)
         bt_hl.addWidget(delete_btn)
 
-        rotate_btn = make_tool_button("↻", "현재 페이지 회전")
+        rotate_btn = make_tool_button("↻", "현재 페이지 회전 (Ctrl+R)", "rotate-cw")
         rotate_btn.clicked.connect(self._rotate_current_page)
         bt_hl.addWidget(rotate_btn)
 
         bt_hl.addWidget(make_divider())
 
         # Page navigation
-        prev_pg_btn = make_tool_button("<", "이전 페이지")
+        prev_pg_btn = make_tool_button("<", "이전 페이지", "chevron-left")
         prev_pg_btn.clicked.connect(self._prev_page)
         bt_hl.addWidget(prev_pg_btn)
         self._page_label = QLabel("—")
@@ -538,14 +583,14 @@ class MainWindow(QMainWindow):
         self._page_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._page_label.setStyleSheet("font-size: 11px; color: #555;")
         bt_hl.addWidget(self._page_label)
-        next_pg_btn = make_tool_button(">", "다음 페이지")
+        next_pg_btn = make_tool_button(">", "다음 페이지", "chevron-right")
         next_pg_btn.clicked.connect(self._next_page)
         bt_hl.addWidget(next_pg_btn)
 
         bt_hl.addWidget(make_divider())
 
         # Zoom
-        zoom_out_btn = make_tool_button("−", "축소")
+        zoom_out_btn = make_tool_button("−", "축소", "minus")
         zoom_out_btn.clicked.connect(self._zoom_out)
         bt_hl.addWidget(zoom_out_btn)
         
@@ -565,7 +610,7 @@ class MainWindow(QMainWindow):
         self._zoom_input.focusInEvent = _zoom_focus_in
         bt_hl.addWidget(self._zoom_input)
         
-        zoom_in_btn = make_tool_button("+", "확대")
+        zoom_in_btn = make_tool_button("+", "확대", "plus")
         zoom_in_btn.clicked.connect(self._zoom_in)
         bt_hl.addWidget(zoom_in_btn)
 
@@ -606,9 +651,12 @@ class MainWindow(QMainWindow):
         self._tab_bar.currentChanged.connect(self._on_tab_changed)
 
         # Keyboard shortcuts
-        open_sc = QKeySequence("Ctrl+O")
-        save_sc = QKeySequence("Ctrl+S")
-        saveas_sc = QKeySequence("Ctrl+Shift+S")
+        QShortcut(QKeySequence("Ctrl+O"), self).activated.connect(self._open_file)
+        QShortcut(QKeySequence("Ctrl+S"), self).activated.connect(self._save_file)
+        QShortcut(QKeySequence("Ctrl+Shift+S"), self).activated.connect(self._save_as)
+        QShortcut(QKeySequence("Ctrl+F"), self).activated.connect(
+            lambda: self._search_input.setFocus()
+        )
 
 
     # ── Tab Management ────────────────────────
@@ -637,6 +685,7 @@ class MainWindow(QMainWindow):
             self._pdf_scroll.set_document(None)
             self._sidebar.load_document(None)
             self._tab_bar.setTabText(0, "새 탭")
+            self._update_welcome_page()
             return
 
         self._tabs[index].close()
@@ -726,6 +775,8 @@ class MainWindow(QMainWindow):
         self._update_tab_title(tab)
         self._update_toolbar_state()
         self._set_status(f"{Path(path).name} — {doc.page_count}p")
+        self._add_recent_file(path)
+        self._update_welcome_page()
 
     def _save_file(self):
         tab = self._active_tab()
@@ -860,11 +911,11 @@ class MainWindow(QMainWindow):
 
     def _zoom_in(self):
         z = self._pdf_scroll.pdf_widget.zoom
-        self._pdf_scroll.set_zoom(z * 1.25)
+        self._pdf_scroll.zoom_to(z * 1.25)
 
     def _zoom_out(self):
         z = self._pdf_scroll.pdf_widget.zoom
-        self._pdf_scroll.set_zoom(z / 1.25)
+        self._pdf_scroll.zoom_to(z / 1.25)
 
     def _on_zoom_changed(self, z: float):
         # Only update text when the input is not focused (don't override user typing)
@@ -882,7 +933,7 @@ class MainWindow(QMainWindow):
             try:
                 percent = float(text)
                 percent = max(10.0, min(percent, 800.0))
-                self._pdf_scroll.set_zoom(percent / 100.0)
+                self._pdf_scroll.zoom_to(percent / 100.0)
                 self._zoom_input.setText(f"{int(percent)}%")
             except ValueError:
                 # Invalid input — restore the current zoom value
@@ -1057,6 +1108,7 @@ class MainWindow(QMainWindow):
         
     def _show_settings(self):
         dlg = SettingsDialog(self._ai_mgr, self)
+        dlg.theme_changed.connect(self._apply_theme)
         if dlg.exec():
             # Refresh AI panel status if it's open
             panel = self._find_ai_panel()
@@ -1067,6 +1119,11 @@ class MainWindow(QMainWindow):
                 else:
                     panel.status_lbl.setText("상단의 설정(⚙) 메뉴에서\nAPI Key를 입력해주세요.")
                     panel.status_lbl.setStyleSheet("color: #FF3B30; font-size: 11px;")
+
+    def _apply_theme(self, is_dark: bool):
+        """Apply light or dark theme without restarting."""
+        from main import apply_theme
+        apply_theme(QApplication.instance(), is_dark)
 
     def _find_ai_panel(self):
         """Find the active AIToolPanel in the right panel."""
@@ -1841,6 +1898,11 @@ class MainWindow(QMainWindow):
     def _set_status(self, msg: str):
         self._status_label.setText(msg)
 
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        if hasattr(self, '_welcome_page') and self._welcome_page.isVisible():
+            self._welcome_page.setGeometry(self._pdf_scroll.viewport().rect())
+
     # ── Drag & Drop (PDF / Image) ──────────────
 
     _IMAGE_EXTS = ('.png', '.jpg', '.jpeg', '.bmp', '.gif', '.tiff', '.tif', '.webp')
@@ -1894,6 +1956,135 @@ class MainWindow(QMainWindow):
         except Exception as e:
             QMessageBox.critical(self, "오류", f"이미지 변환 실패:\n{e}")
 
+    # ── Window State Persistence ────────────────
+
+    def _restore_window_state(self):
+        """Restore window geometry and splitter sizes from QSettings."""
+        geo = self._settings.value("window_geometry")
+        if geo and isinstance(geo, QByteArray):
+            self.restoreGeometry(geo)
+        state = self._settings.value("window_state")
+        if state and isinstance(state, QByteArray):
+            self.restoreState(state)
+        splitter_sizes = self._settings.value("splitter_sizes")
+        if splitter_sizes:
+            try:
+                self._splitter.setSizes([int(s) for s in splitter_sizes])
+            except (TypeError, ValueError):
+                pass
+
+    def _save_window_state(self):
+        """Save window geometry and splitter sizes to QSettings."""
+        self._settings.setValue("window_geometry", self.saveGeometry())
+        self._settings.setValue("window_state", self.saveState())
+        self._settings.setValue("splitter_sizes", self._splitter.sizes())
+
+    # ── Recent Files ─────────────────────────
+
+    def _get_recent_files(self) -> list[str]:
+        """Get recent files list from QSettings."""
+        files = self._settings.value("recent_files", [])
+        if not files:
+            return []
+        # Filter out files that no longer exist
+        return [f for f in files if os.path.exists(f)][:10]
+
+    def _add_recent_file(self, path: str):
+        """Add a file path to recent files list."""
+        recent = self._get_recent_files()
+        # Remove if already in list, then prepend
+        abs_path = os.path.normpath(os.path.abspath(path))
+        recent = [f for f in recent if os.path.normpath(os.path.abspath(f)) != abs_path]
+        recent.insert(0, path)
+        self._settings.setValue("recent_files", recent[:10])
+        # Update welcome page if visible
+        self._update_welcome_page()
+
+    # ── Welcome Page (Start Page) ────────────
+
+    def _build_welcome_page(self):
+        """Build the welcome page overlay shown when no document is open."""
+        self._welcome_page = QWidget(self._pdf_scroll)
+        self._welcome_page.setStyleSheet("background: transparent;")
+        vl = QVBoxLayout(self._welcome_page)
+        vl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        vl.setSpacing(16)
+
+        # Icon
+        icon_lbl = QLabel("📄")
+        icon_lbl.setStyleSheet("font-size: 48px; background: transparent;")
+        icon_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        vl.addWidget(icon_lbl)
+
+        # Title
+        title = QLabel("PDF Pro Tool")
+        title.setStyleSheet("font-size: 20px; font-weight: bold; color: #555; background: transparent;")
+        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        vl.addWidget(title)
+
+        # Subtitle
+        sub = QLabel("PDF 파일을 드래그하거나 열기 버튼(Ctrl+O)을 누르세요")
+        sub.setStyleSheet("font-size: 12px; color: #888; background: transparent;")
+        sub.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        vl.addWidget(sub)
+
+        vl.addSpacing(12)
+
+        # Recent files section
+        self._recent_files_container = QWidget()
+        self._recent_files_container.setStyleSheet("background: transparent;")
+        self._recent_files_layout = QVBoxLayout(self._recent_files_container)
+        self._recent_files_layout.setContentsMargins(0, 0, 0, 0)
+        self._recent_files_layout.setSpacing(4)
+        vl.addWidget(self._recent_files_container)
+
+        self._update_welcome_recent_list()
+        self._welcome_page.hide()
+
+    def _update_welcome_recent_list(self):
+        """Populate the recent files list on the welcome page."""
+        layout = self._recent_files_layout
+        # Clear existing
+        while layout.count():
+            item = layout.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+
+        recent = self._get_recent_files()
+        if not recent:
+            return
+
+        header = QLabel("최근 파일")
+        header.setStyleSheet("font-size: 11px; font-weight: bold; color: #666; background: transparent;")
+        header.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(header)
+
+        for path in recent[:7]:
+            name = os.path.basename(path)
+            btn = QPushButton(f"  📄 {name}")
+            btn.setToolTip(path)
+            btn.setCursor(Qt.CursorShape.PointingHandCursor)
+            btn.setStyleSheet(
+                "QPushButton { text-align: left; padding: 6px 16px; font-size: 12px;"
+                " border: none; background: transparent; color: #2979FF; }"
+                "QPushButton:hover { background: rgba(41,121,255,0.1); border-radius: 4px; }"
+            )
+            btn.clicked.connect(lambda _, p=path: self.load_file(p))
+            layout.addWidget(btn)
+
+    def _update_welcome_page(self):
+        """Show or hide welcome page based on current document state."""
+        if not hasattr(self, '_welcome_page'):
+            return
+        doc = self._active_doc()
+        if doc is None:
+            self._update_welcome_recent_list()
+            self._welcome_page.setGeometry(self._pdf_scroll.viewport().rect())
+            self._welcome_page.show()
+            self._welcome_page.raise_()
+        else:
+            self._welcome_page.hide()
+
     # ── Close ─────────────────────────────────
 
     def closeEvent(self, event):
@@ -1907,6 +2098,7 @@ class MainWindow(QMainWindow):
             if reply == QMessageBox.StandardButton.No:
                 event.ignore()
                 return
+        self._save_window_state()
         for tab in self._tabs:
             tab.close()
         event.accept()

@@ -492,6 +492,33 @@ class PDFViewWidget(QWidget):
         # Debounce the high-res rendering by 100ms
         self._zoom_timer.start(100)
 
+    def zoom_to(self, target_z: float):
+        """Smoothly animate to a new zoom level (used by UI buttons)."""
+        target_z = max(0.1, min(target_z, 8.0))
+        if abs(target_z - self._zoom_target) < 0.001:
+            return
+
+        # Snapshot invariant anchors (center of viewport) for the lerp animation,
+        # exactly the same way wheelEvent does exactly once per gesture
+        if not self._lerp_timer.isActive():
+            parent = self.parent()
+            if parent and parent.parent():
+                sa = parent.parent()
+                if hasattr(sa, "verticalScrollBar"):
+                    vbar = sa.verticalScrollBar()
+                    vh = sa.viewport().height() if hasattr(sa, "viewport") else 600
+                    self._zoom_gesture_vbar = vbar
+                    self._zoom_gesture_scroll0 = vbar.value()
+                    self._zoom_gesture_zoom0 = self._zoom
+                    self._zoom_gesture_vh = vh
+                    # Set the anchor to the center of the viewport for button clicks
+                    self._zoom_gesture_cursor_vp_y = vh / 2.0
+
+        self._zoom_target = target_z
+        self._is_zooming = True
+        self._zoom_timer.start(150)
+        self._lerp_timer.start()
+
     def _on_zoom_finished(self):
         """Called when user stops scrolling (150 ms debounce)."""
         if abs(self._zoom_target - self._zoom) > 0.001:
@@ -566,7 +593,7 @@ class PDFViewWidget(QWidget):
 
     # ── Rendering ─────────────────────────────
 
-    def _get_page_pixmap(self, page_index: int, target_w: int, target_h: int) -> Optional[QPixmap]:
+    def _get_page_pixmap(self, page_index: int) -> Optional[QPixmap]:
         """
         Returns cached pixmap if available. If zooming, returns the best available cached
         pixmap to be scaled by QPainter. If not zooming, triggers background render.
@@ -585,14 +612,14 @@ class PDFViewWidget(QWidget):
 
         # Check for a low-res preview image for quick display
         if key in self._low_res_cache:
-            return self._low_res_cache[key].scaled(target_w, target_h, Qt.AspectRatioMode.IgnoreAspectRatio, Qt.TransformationMode.SmoothTransformation)
+            return self._low_res_cache[key]
 
         # Only show a blurry scaled fallback from another zoom level during active zoom transitions.
         if self._is_zooming:
             candidates = [(k, v) for k, v in self._render_cache.items() if k[0] == page_index]
             if candidates:
                 _, best_pixmap = candidates[-1]
-                return best_pixmap.scaled(target_w, target_h, Qt.AspectRatioMode.IgnoreAspectRatio, Qt.TransformationMode.SmoothTransformation)
+                return best_pixmap
 
         return None
 
@@ -718,7 +745,7 @@ class PDFViewWidget(QWidget):
                 continue
 
             # Render page
-            pixmap = self._get_page_pixmap(i, pw, page_h)
+            pixmap = self._get_page_pixmap(i)
 
             if pixmap:
                 if getattr(self, "_is_zooming", False) or pixmap.width() != pw or pixmap.height() != page_h:
@@ -796,17 +823,7 @@ class PDFViewWidget(QWidget):
 
     def _draw_drop_zone(self):
         painter = QPainter(self)
-        painter.fillRect(self.rect(), QColor("#f0f0f0"))
-        painter.setPen(QPen(QColor("#999999"), 2, Qt.PenStyle.DashLine))
-        painter.drawRect(self.rect().adjusted(40, 40, -40, -40))
-        painter.setPen(QColor("#666666"))
-        font = QFont()
-        font.setPointSize(14)
-        painter.setFont(font)
-        painter.drawText(
-            self.rect(), Qt.AlignmentFlag.AlignCenter,
-            "PDF 파일을 드래그하거나\n열기 버튼을 누르세요"
-        )
+        painter.fillRect(self.rect(), QColor("#444"))
         painter.end()
 
     def _draw_overlay_stamps(self, painter: QPainter, page_index: int, px: int, py: int):
@@ -1760,6 +1777,7 @@ class PDFViewWidget(QWidget):
                     "font": first_span.get("font", ""),
                     "size": first_span.get("size", 12),
                     "color": first_span.get("color", 0),
+                    "flags": first_span.get("flags", 0),
                     "origin": first_span.get("origin", (bbox.x0, bbox.y1)),
                     "first_char_x": first_char_x,
                     "spans": spans,
@@ -2027,16 +2045,28 @@ class PDFViewWidget(QWidget):
         font_size = line_info["size"]
         origin = line_info["origin"]
         bbox = line_info["bbox"]
+        flags = line_info.get("flags", 0)
+
+        # PyMuPDF span flags: bit 4 (16) = bold, bit 1 (2) = italic, bit 2 (4) = serifed
+        is_bold = bool(flags & 16)
+        is_italic = bool(flags & 2)
+        is_serif = bool(flags & 4)
 
         edit_ok = False
         try:
             page = self._doc[page_index]
 
             # ── 폰트 결정 ────────────────────────────────────────
-            font_kwargs = self._extract_embedded_font(page, line_info["font"])
+            font_kwargs = self._extract_embedded_font(
+                page, line_info["font"], 
+                is_bold=is_bold, is_italic=is_italic, is_serif=is_serif
+            )
             if font_kwargs is None:
-                font_kwargs = self._map_to_fitz_font(line_info["font"], new_text)
-            _log.info(f"font={line_info['font']!r}  kwargs={font_kwargs}")
+                font_kwargs = self._map_to_fitz_font(
+                    line_info["font"], new_text, 
+                    is_bold=is_bold, is_italic=is_italic, is_serif=is_serif
+                )
+            _log.info(f"font={line_info['font']!r} flags={flags} kwargs={font_kwargs}")
 
             # 1) 원본 텍스트를 Redaction으로 깔끔하게 지운다 (배경 그래픽, 이미지 등은 보존)
             cover_rect = fitz.Rect(
@@ -2104,7 +2134,7 @@ class PDFViewWidget(QWidget):
         return (1.0, 1.0, 1.0)
 
     @staticmethod
-    def _map_to_fitz_font(original_font: str, text: str) -> dict:
+    def _map_to_fitz_font(original_font: str, text: str, is_bold: bool = False, is_italic: bool = False, is_serif: bool = False) -> dict:
         """Map a PDF font name to PyMuPDF font parameters.
 
         Returns a dict with 'fontname' and optionally 'fontfile' keys,
@@ -2142,8 +2172,15 @@ class PDFViewWidget(QWidget):
             windir = os.environ.get("WINDIR", "C:\\Windows")
             fonts_dir = os.path.join(windir, "Fonts")
             lower = original_font.lower().replace("-", "").replace(" ", "").replace("_", "")
-            is_bold = "bold" in lower or "heavy" in lower or "black" in lower
+            is_bold = is_bold or "bold" in lower or "heavy" in lower or "black" in lower
             is_light = "light" in lower or "thin" in lower or "semilight" in lower
+            
+            # CJK PDF font flags are often inaccurate (e.g. serif flag set on sans-serif).
+            # Ignore the PDF serif flag if the font name has no explicit serif keywords.
+            is_explicit_serif = "batang" in lower or "gungsuh" in lower or "myeongjo" in lower or "serif" in lower
+            if is_serif and not is_explicit_serif:
+                is_serif = False
+            is_serif = is_serif or is_explicit_serif
 
             # Map original font family to system font files
             font_map = [
@@ -2173,16 +2210,30 @@ class PDFViewWidget(QWidget):
                 if os.path.exists(path):
                     return {"fontname": matched.split(".")[0], "fontfile": path}
 
-            # Default: Malgun Gothic with weight matching
-            if is_bold:
+            # Default fallback for CJK
+            if is_serif:
+                default_file = "batang.ttc"
+                default_name = "batang"
+            elif is_bold:
                 default_file = "malgunbd.ttf"
+                default_name = "malgunbd"
             elif is_light:
                 default_file = "malgunsl.ttf"
+                default_name = "malgunsl"
             else:
                 default_file = "malgun.ttf"
+                default_name = "malgun"
+
             path = os.path.join(fonts_dir, default_file)
             if os.path.exists(path):
-                return {"fontname": default_file.split(".")[0], "fontfile": path}
+                return {"fontname": default_name, "fontfile": path}
+
+            # If the specific one wasn't found, try the universal malgun fallback
+            if is_bold:
+                path = os.path.join(fonts_dir, "malgunbd.ttf")
+                if os.path.exists(path):
+                    return {"fontname": "malgunbd", "fontfile": path}
+                    
             path = os.path.join(fonts_dir, "malgun.ttf")
             if os.path.exists(path):
                 return {"fontname": "malgun", "fontfile": path}
@@ -2195,8 +2246,9 @@ class PDFViewWidget(QWidget):
         # Latin font mapping — use system font files for accurate rendering
         import os as _os
         lower = original_font.lower().replace("-", "").replace(" ", "").replace("_", "")
-        is_bold = "bold" in lower or "heavy" in lower or "black" in lower
-        is_italic = "italic" in lower or "oblique" in lower
+        is_bold = is_bold or "bold" in lower or "heavy" in lower or "black" in lower
+        is_italic = is_italic or "italic" in lower or "oblique" in lower
+        is_serif = is_serif or "serif" in lower or "times" in lower or "georgia" in lower or "garamond" in lower
 
         windir = _os.environ.get("WINDIR", "C:\\Windows")
         fonts_dir = _os.path.join(windir, "Fonts")
@@ -2257,14 +2309,73 @@ class PDFViewWidget(QWidget):
 
     _embedded_font_cache: dict = {}  # xref -> temp file path
 
-    def _extract_embedded_font(self, page: fitz.Page, font_name: str) -> Optional[dict]:
-        """PDF에 내장된 폰트를 추출하여 재사용한다.
+    @staticmethod
+    def _read_font_family_from_binary(content: bytes) -> Optional[str]:
+        """TrueType/OpenType 폰트 바이너리에서 실제 폰트 패밀리 이름을 읽는다."""
+        import struct
+        try:
+            data = content
+            # TTC (font collection) → 첫 번째 폰트의 오프셋으로 이동
+            if data[:4] == b'ttcf':
+                offset = struct.unpack('>I', data[12:16])[0]
+                data = data[offset:]
 
-        Returns dict with fontname/fontfile keys, or None if extraction fails.
-        서브셋 폰트(이름에 '+' 포함)는 모든 글리프를 갖고 있지 않을 수 있으므로 건너뛴다.
+            num_tables = struct.unpack('>H', data[4:6])[0]
+            name_offset = name_length = None
+            for i in range(min(num_tables, 100)):
+                entry = 12 + i * 16
+                if entry + 16 > len(data):
+                    break
+                tag = data[entry:entry + 4]
+                if tag == b'name':
+                    name_offset = struct.unpack('>I', data[entry + 8:entry + 12])[0]
+                    name_length = struct.unpack('>I', data[entry + 12:entry + 16])[0]
+                    break
+
+            if name_offset is None or name_offset + name_length > len(content):
+                return None
+
+            nt = content[name_offset:name_offset + name_length]
+            if len(nt) < 6:
+                return None
+            count = struct.unpack('>H', nt[2:4])[0]
+            str_offset = struct.unpack('>H', nt[4:6])[0]
+
+            # nameID=1 (Font Family) 레코드를 찾는다
+            for i in range(min(count, 200)):
+                rec = 6 + i * 12
+                if rec + 12 > len(nt):
+                    break
+                pid = struct.unpack('>H', nt[rec:rec + 2])[0]
+                name_id = struct.unpack('>H', nt[rec + 6:rec + 8])[0]
+                slen = struct.unpack('>H', nt[rec + 8:rec + 10])[0]
+                soff = struct.unpack('>H', nt[rec + 10:rec + 12])[0]
+
+                if name_id != 1:
+                    continue
+
+                s = nt[str_offset + soff:str_offset + soff + slen]
+                if pid == 3:  # Windows (UTF-16BE)
+                    try:
+                        return s.decode('utf-16-be').strip()
+                    except Exception:
+                        pass
+                elif pid == 1:  # Mac (mac-roman)
+                    try:
+                        return s.decode('mac-roman').strip()
+                    except Exception:
+                        pass
+            return None
+        except Exception:
+            return None
+
+    def _extract_embedded_font(self, page: fitz.Page, font_name: str, is_bold: bool = False, is_italic: bool = False, is_serif: bool = False) -> Optional[dict]:
+        """PDF 폰트의 실제 이름을 알아내어 시스템 폰트를 매칭한다.
+
+        서브셋 폰트 바이너리는 글리프가 부족하므로 직접 사용하지 않고,
+        폰트 바이너리의 name 테이블에서 실제 패밀리 이름을 읽어서
+        시스템에 설치된 전체 폰트 파일을 사용한다.
         """
-        import os as _os
-
         if not self._doc:
             return None
 
@@ -2273,6 +2384,9 @@ class PDFViewWidget(QWidget):
         except Exception:
             return None
 
+        # 폰트 이름이 깨졌는지 확인 (비ASCII 제어 문자 포함)
+        font_name_corrupted = any(ord(c) < 32 for c in font_name)
+
         for font_info in fonts:
             if len(font_info) < 5:
                 continue
@@ -2280,37 +2394,43 @@ class PDFViewWidget(QWidget):
             fname = font_info[3]
             sname = font_info[4]
 
-            # fname 또는 sname이 원본 폰트 이름과 일치하는지 확인
-            if font_name not in (fname, sname):
-                continue
-
-            # 서브셋 폰트 건너뛰기 (예: "ABCDEF+ArialMT")
-            if "+" in fname:
-                continue
-
-            # 캐시 확인
-            if xref in self._embedded_font_cache:
-                cached = self._embedded_font_cache[xref]
-                if _os.path.exists(cached):
-                    return {"fontname": fname, "fontfile": cached}
-
-            try:
-                basename, ext, subtype, content = self._doc.extract_font(xref)
-                if not content or len(content) < 100:
+            # 정상 폰트 이름일 때: 매칭되는 것만 처리
+            if not font_name_corrupted:
+                if font_name not in (fname, sname):
                     continue
 
-                # 임시 파일로 저장
-                import tempfile
-                suffix = f".{ext}" if ext else ".ttf"
-                tmp = tempfile.NamedTemporaryFile(
-                    delete=False, suffix=suffix, prefix="pdfpro_font_"
-                )
-                tmp.write(content)
-                tmp.close()
-                self._embedded_font_cache[xref] = tmp.name
-                return {"fontname": fname, "fontfile": tmp.name}
+            # 폰트 바이너리에서 실제 패밀리 이름 추출
+            try:
+                basename, ext, subtype, content = self._doc.extract_font(xref)
             except Exception:
                 continue
+
+            real_family = None
+            if content and len(content) > 100:
+                real_family = self._read_font_family_from_binary(content)
+
+            # basename에서도 시도 (서브셋 접두사 제거)
+            if not real_family:
+                raw = basename if basename else fname
+                if "+" in raw:
+                    raw = raw.split("+")[-1]
+                if raw and len(raw) > 1:
+                    real_family = raw
+
+            _log.info(f"extract_font xref={xref}: basename={basename!r} "
+                       f"fname={fname!r} sname={sname!r} "
+                       f"real_family={real_family!r} "
+                       f"content_len={len(content) if content else 0}")
+
+            if real_family:
+                # 실제 폰트 이름으로 시스템 폰트 매칭 (전체 글리프 포함)
+                result = self._map_to_fitz_font(real_family, "가", is_bold=is_bold, is_italic=is_italic, is_serif=is_serif)
+                if result:
+                    _log.info(f"matched system font: {result}")
+                    return result
+
+            if font_name_corrupted:
+                continue  # 다음 font entry 시도
 
         return None
 
@@ -2575,6 +2695,10 @@ class PDFScrollView(QScrollArea):
                 QTimer.singleShot(0, lambda: hbar.setValue(hval))
             else:
                 hbar.setValue(0)
+
+    def zoom_to(self, z: float):
+        """Pass smooth zoom requests to the viewer widget."""
+        self._pdf_widget.zoom_to(z)
 
     def scroll_to_page(self, page_index: int):
         y = self._pdf_widget.y_for_page(page_index)
