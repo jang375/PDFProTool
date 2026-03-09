@@ -116,6 +116,39 @@ class SettingsDialog(QDialog):
 
 # ─────────────────────────────────────────────
 
+TOOL_BUTTON_STYLE = (
+    "QToolButton { border: 1px solid transparent; border-radius: 7px; "
+    "font-size: 16px; background: transparent; color: #2f3745; }"
+    "QToolButton:hover { background: #edf2ff; border-color: #d6e2ff; color: #1f3a6d; }"
+    "QToolButton:pressed { background: #dde7fb; border-color: #bfd3fa; }"
+)
+
+TOPBAR_BUTTON_STYLE = (
+    "QPushButton { padding: 6px 11px; font-size: 12px; font-weight: 500; color: #2f3745; "
+    "border: 1px solid transparent; background: transparent; border-radius: 7px; margin: 0px; }"
+    "QPushButton:hover { background: #edf2ff; border: 1px solid #d6e2ff; color: #1f3a6d; }"
+    "QPushButton:pressed { background: #dde7fb; border: 1px solid #bfd3fa; }"
+)
+
+TOPBAR_BUTTON_ACTIVE_STYLE = (
+    "QPushButton { padding: 6px 11px; font-size: 12px; font-weight: 600; color: #0f4ac4; "
+    "border: 1px solid #b6cdf8; background: #e6efff; border-radius: 7px; margin: 0px; }"
+    "QPushButton:hover { background: #dce9ff; border: 1px solid #99baf5; }"
+    "QPushButton:pressed { background: #cfe0ff; border: 1px solid #87abef; }"
+)
+
+DIVIDER_STYLE = "background: #d7dee8; min-width: 1px; max-width: 1px; margin: 4px 5px;"
+TOP_TAB_ROW_STYLE = "background: #f7f9fc; border-bottom: 1px solid #e0e6ef;"
+TOP_TOOLS_ROW_STYLE = "background: #fbfcfe; border-bottom: 1px solid #e0e6ef;"
+BOTTOM_TOOLBAR_STYLE = "background: #f7f9fc; border-top: 1px solid #e0e6ef;"
+SEARCH_CONTAINER_STYLE = "background: #f3f6fb; border-radius: 8px; border: 1px solid #dde5f0;"
+SEARCH_INPUT_STYLE = "border: none; font-size: 12px; color: #2f3745; background: transparent;"
+SEARCH_NAV_BUTTON_STYLE = (
+    "QPushButton { padding: 0px 2px; font-size: 12px; font-weight: bold; border: none; "
+    "background: transparent; color: #5f6d84; }"
+    "QPushButton:hover { background: #e5edf9; border-radius: 4px; color: #31435e; }"
+)
+
 def make_tool_button(text: str, tooltip: str, icon_name: str = "") -> QToolButton:
     btn = QToolButton()
     if icon_name:
@@ -125,15 +158,8 @@ def make_tool_button(text: str, tooltip: str, icon_name: str = "") -> QToolButto
         btn.setText(text)
     btn.setToolTip(tooltip)
     btn.setFixedSize(36, 32)
-    btn.setStyleSheet(
-        "QToolButton { border: none; border-radius: 4px; font-size: 16px; }"
-        "QToolButton:hover { background: rgba(0,0,0,0.08); }"
-        "QToolButton:pressed { background: rgba(0,0,0,0.15); }"
-    )
+    btn.setStyleSheet(TOOL_BUTTON_STYLE)
     return btn
-
-
-DIVIDER_STYLE = "background: #d0d0d0; min-width: 1px; max-width: 1px; margin: 3px 4px;"
 
 
 def make_divider() -> QFrame:
@@ -372,7 +398,7 @@ class MainWindow(QMainWindow):
         # ── Top Bar Row 1: Tabs ──
         self._top_tab_widget = QWidget()
         self._top_tab_widget.setFixedHeight(35)
-        self._top_tab_widget.setStyleSheet("background: #fdfdfd; border-bottom: 1px solid #e0e0e0;")
+        self._top_tab_widget.setStyleSheet(TOP_TAB_ROW_STYLE)
         tab_layout = QHBoxLayout(self._top_tab_widget)
         tab_layout.setContentsMargins(10, 0, 10, 0)
         tab_layout.setSpacing(5)
@@ -383,9 +409,28 @@ class MainWindow(QMainWindow):
         self._tab_bar.setTabsClosable(True)
         self._tab_bar.setDocumentMode(True)
         self._tab_bar.setStyleSheet("""
-            QTabBar::tab { padding: 6px 15px; background: transparent; border: none; color: #555; font-size: 13px; margin-top: 4px; }
-            QTabBar::tab:selected { background: #ffffff; border-top: 2px solid #1870d5; border-bottom: 2px solid #ffffff; color: #222; font-weight: bold; border-top-left-radius: 4px; border-top-right-radius: 4px; }
-            QTabBar::tab:hover:!selected { background: #f0f0f0; border-radius: 4px; }
+            QTabBar::tab {
+                padding: 6px 15px;
+                background: transparent;
+                border: none;
+                color: #556074;
+                font-size: 13px;
+                margin-top: 4px;
+            }
+            QTabBar::tab:selected {
+                background: #ffffff;
+                border-top: 2px solid #1f67e6;
+                border-bottom: 2px solid #ffffff;
+                color: #1f2d45;
+                font-weight: 600;
+                border-top-left-radius: 5px;
+                border-top-right-radius: 5px;
+            }
+            QTabBar::tab:hover:!selected {
+                background: #eef3fb;
+                border-radius: 5px;
+                color: #384a66;
+            }
         """)
         self._tab_bar.tabCloseRequested.connect(self._close_tab)
         self._tab_bar.addTab("새 문서")
@@ -395,9 +440,10 @@ class MainWindow(QMainWindow):
         add_tab_btn.setText("+ 만들기")
         add_tab_btn.setToolTip("새 탭 추가")
         add_tab_btn.setStyleSheet(
-            "QToolButton { border: 1px solid #ccc; border-radius: 4px; padding: 2px 8px; font-size: 11px; background: #fff; color: #333; margin-left: 5px; margin-top: 5px; margin-bottom: 3px; }"
-            "QToolButton:hover { background: #f0f0f0; border-color: #bbb; }"
-            "QToolButton:pressed { background: #e0e0e0; }"
+            "QToolButton { border: 1px solid #d3dceb; border-radius: 6px; padding: 2px 9px; "
+            "font-size: 11px; background: #fff; color: #2f3745; margin-left: 5px; margin-top: 5px; margin-bottom: 3px; }"
+            "QToolButton:hover { background: #f2f6fd; border-color: #b8c8e6; }"
+            "QToolButton:pressed { background: #e5edf9; }"
         )
         add_tab_btn.clicked.connect(self._add_new_tab)
         tab_layout.addWidget(add_tab_btn)
@@ -408,7 +454,7 @@ class MainWindow(QMainWindow):
         # ── Top Bar Row 2: Tools & Controls ──
         self._top_tools_widget = QWidget()
         self._top_tools_widget.setFixedHeight(45)
-        self._top_tools_widget.setStyleSheet("background: #fcfcfc; border-bottom: 1px solid #e0e0e0;")
+        self._top_tools_widget.setStyleSheet(TOP_TOOLS_ROW_STYLE)
         tb_layout = QHBoxLayout(self._top_tools_widget)
         tb_layout.setContentsMargins(10, 0, 10, 0)
         tb_layout.setSpacing(5)
@@ -434,10 +480,7 @@ class MainWindow(QMainWindow):
             btn.setIcon(svg_icon(icon_name, 16))
             btn.setIconSize(QSize(16, 16))
             btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-            btn.setStyleSheet(
-                "QPushButton { padding: 6px 10px; font-size: 12px; color: #444; border: 1px solid transparent; background: transparent; border-radius: 4px; margin: 0px; }"
-                "QPushButton:hover { background: #f0f0f0; border: 1px solid #ddd; }"
-            )
+            btn.setStyleSheet(TOPBAR_BUTTON_STYLE)
             if callback:
                 btn.clicked.connect(callback)
             return btn
@@ -457,7 +500,7 @@ class MainWindow(QMainWindow):
 
         # Search bar (Moved to the right end)
         search_container = QWidget()
-        search_container.setStyleSheet("background: #f0f0f0; border-radius: 6px; border: none;")
+        search_container.setStyleSheet(SEARCH_CONTAINER_STYLE)
         search_container.setFixedHeight(30)
         search_container.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Fixed)
         sl = QHBoxLayout(search_container)
@@ -468,7 +511,7 @@ class MainWindow(QMainWindow):
         self._search_input = QLineEdit()
         self._search_input.setPlaceholderText("텍스트 찾기")
         self._search_input.setFixedWidth(120)
-        self._search_input.setStyleSheet("border: none; font-size: 12px; background: transparent;")
+        self._search_input.setStyleSheet(SEARCH_INPUT_STYLE)
         self._search_input.returnPressed.connect(self._perform_search)
         sl.addWidget(self._search_input)
         
@@ -480,20 +523,16 @@ class MainWindow(QMainWindow):
         search_icon_btn.clicked.connect(self._perform_search)
         sl.addWidget(search_icon_btn)
 
-        _nav_btn_style = (
-            "QPushButton { padding: 0px 2px; font-size: 12px; font-weight: bold; border: none; background: transparent; color: #666; }"
-            "QPushButton:hover { background: #e0e0e0; border-radius: 3px; }"
-        )
         self._search_prev_btn = QPushButton("<")
         self._search_prev_btn.setFixedSize(22, 22)
-        self._search_prev_btn.setStyleSheet(_nav_btn_style)
+        self._search_prev_btn.setStyleSheet(SEARCH_NAV_BUTTON_STYLE)
         self._search_prev_btn.clicked.connect(lambda: self._navigate_search(-1))
         self._search_prev_btn.hide()
         sl.addWidget(self._search_prev_btn)
 
         self._search_next_btn = QPushButton(">")
         self._search_next_btn.setFixedSize(22, 22)
-        self._search_next_btn.setStyleSheet(_nav_btn_style)
+        self._search_next_btn.setStyleSheet(SEARCH_NAV_BUTTON_STYLE)
         self._search_next_btn.clicked.connect(lambda: self._navigate_search(1))
         self._search_next_btn.hide()
         sl.addWidget(self._search_next_btn)
@@ -527,7 +566,7 @@ class MainWindow(QMainWindow):
         self._sidebar.remove_outline_entry.connect(self._remove_outline_entry)
 
         self._splitter = QSplitter(Qt.Orientation.Horizontal)
-        self._splitter.setStyleSheet("QSplitter::handle { background: #f0f0f0; }")
+        self._splitter.setStyleSheet("QSplitter::handle { background: #dfe6f0; width: 1px; }")
         self._splitter.addWidget(self._sidebar)
 
         # Center Area: PDF Viewer + Grid View Layout with Bottom Float Toolbar
@@ -554,13 +593,13 @@ class MainWindow(QMainWindow):
         # Bottom Float Toolbar (Status + Zoom + Paging)
         bottom_toolbar = QWidget()
         bottom_toolbar.setFixedHeight(36)
-        bottom_toolbar.setStyleSheet("background: #fdfdfd; border-top: 1px solid #e0e0e0;")
+        bottom_toolbar.setStyleSheet(BOTTOM_TOOLBAR_STYLE)
         bt_hl = QHBoxLayout(bottom_toolbar)
         bt_hl.setContentsMargins(10, 0, 10, 0)
         bt_hl.setSpacing(10)
 
         self._status_label = QLabel("PDF Pro Tool — Windows Edition")
-        self._status_label.setStyleSheet("font-size: 11px; color: #888; padding: 2px;")
+        self._status_label.setStyleSheet("font-size: 11px; color: #6b7588; padding: 2px;")
         bt_hl.addWidget(self._status_label)
         bt_hl.addStretch()
 
@@ -581,7 +620,7 @@ class MainWindow(QMainWindow):
         self._page_label = QLabel("—")
         self._page_label.setFixedWidth(60)
         self._page_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self._page_label.setStyleSheet("font-size: 11px; color: #555;")
+        self._page_label.setStyleSheet("font-size: 11px; color: #3f4c63;")
         bt_hl.addWidget(self._page_label)
         next_pg_btn = make_tool_button(">", "다음 페이지", "chevron-right")
         next_pg_btn.clicked.connect(self._next_page)
@@ -599,8 +638,8 @@ class MainWindow(QMainWindow):
         self._zoom_input.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._zoom_input.setStyleSheet(
             "QLineEdit { font-size: 11px; font-weight: 500; border: 1px solid transparent; "
-            "border-radius: 3px; background: transparent; }"
-            "QLineEdit:focus { border: 1px solid #ccc; background: white; }"
+            "border-radius: 4px; background: transparent; color: #2f3745; }"
+            "QLineEdit:focus { border: 1px solid #b7c5da; background: #ffffff; }"
         )
         self._zoom_input.editingFinished.connect(self._apply_zoom_input)
         _orig_focus = self._zoom_input.focusInEvent
@@ -708,11 +747,7 @@ class MainWindow(QMainWindow):
         # Switch back to PDF view when changing tabs
         if self._content_stack.currentWidget() == self._grid_view:
             self._content_stack.setCurrentWidget(self._pdf_scroll)
-            self._grid_view_btn.setStyleSheet(
-                "QToolButton { border: none; border-radius: 4px; font-size: 16px; }"
-                "QToolButton:hover { background: rgba(0,0,0,0.08); }"
-                "QToolButton:pressed { background: rgba(0,0,0,0.15); }"
-            )
+            self._grid_view_btn.setStyleSheet(TOPBAR_BUTTON_STYLE)
         self._pdf_scroll.set_document(tab.document, tab.file_path)
         self._sidebar.load_document(tab.document, tab.file_path)
         self._sidebar.set_current_page(tab.current_page)
@@ -1484,21 +1519,13 @@ class MainWindow(QMainWindow):
             # 다른 모드가 활성화되어 있으면 정리 (_clear_right_panel이 모드도 종료)
             self._clear_right_panel()
             pw.enter_text_edit_mode()
-            self._text_edit_btn.setStyleSheet(
-                "QToolButton { border: none; border-radius: 4px; font-size: 16px; "
-                "background: rgba(41,121,255,0.2); }"
-                "QToolButton:hover { background: rgba(41,121,255,0.3); }"
-            )
+            self._text_edit_btn.setStyleSheet(TOPBAR_BUTTON_ACTIVE_STYLE)
             self._set_status("텍스트 편집 모드 — 텍스트를 클릭하여 수정 (Esc: 취소, Enter: 적용)")
 
     def _reset_text_edit_btn_style(self):
         """Reset text edit button to default style."""
         if hasattr(self, '_text_edit_btn'):
-            self._text_edit_btn.setStyleSheet(
-                "QToolButton { border: none; border-radius: 4px; font-size: 16px; }"
-                "QToolButton:hover { background: rgba(0,0,0,0.08); }"
-                "QToolButton:pressed { background: rgba(0,0,0,0.15); }"
-            )
+            self._text_edit_btn.setStyleSheet(TOPBAR_BUTTON_STYLE)
 
     # ── Grid View ─────────────────────────────
 
@@ -1508,10 +1535,7 @@ class MainWindow(QMainWindow):
             # Switch back to PDF view
             self._content_stack.setCurrentWidget(self._pdf_scroll)
             if hasattr(self, '_grid_view_btn'):
-                self._grid_view_btn.setStyleSheet(
-                    "QPushButton { text-align: left; padding: 10px 15px; font-size: 13px; color: #444; border: none; background: transparent; border-radius: 4px; margin: 0px 8px; }"
-                    "QPushButton:hover { background: #e8e8e8; font-weight: bold; }"
-                )
+                self._grid_view_btn.setStyleSheet(TOPBAR_BUTTON_STYLE)
             self._set_status("PDF 보기")
         else:
             doc = self._active_doc()
@@ -1529,11 +1553,7 @@ class MainWindow(QMainWindow):
             doc_bytes = pw._doc_bytes_snapshot
             self._grid_view.load_document(tab.document, tab.current_page, file_path=tab.file_path, doc_bytes=doc_bytes)
             if hasattr(self, '_grid_view_btn'):
-                self._grid_view_btn.setStyleSheet(
-                    "QPushButton { text-align: left; padding: 10px 15px; font-size: 13px; border: none; border-radius: 4px; margin: 0px 8px; "
-                    "background: rgba(41,121,255,0.2); color: #000; font-weight: bold; }"
-                    "QPushButton:hover { background: rgba(41,121,255,0.3); }"
-                )
+                self._grid_view_btn.setStyleSheet(TOPBAR_BUTTON_ACTIVE_STYLE)
             self._set_status("그리드 보기 — 더블클릭으로 페이지 이동")
 
     def _on_grid_page_selected(self, page: int):
@@ -1541,10 +1561,7 @@ class MainWindow(QMainWindow):
         self._go_to_page(page)
         self._content_stack.setCurrentWidget(self._pdf_scroll)
         if hasattr(self, '_grid_view_btn'):
-            self._grid_view_btn.setStyleSheet(
-                "QPushButton { text-align: left; padding: 10px 15px; font-size: 13px; color: #444; border: none; background: transparent; border-radius: 4px; margin: 0px 8px; }"
-                "QPushButton:hover { background: #e8e8e8; font-weight: bold; }"
-            )
+            self._grid_view_btn.setStyleSheet(TOPBAR_BUTTON_STYLE)
         self._set_status(f"Page {page + 1}")
 
     # ── Bookmarks ─────────────────────────────
