@@ -7,6 +7,9 @@ Runs OCR in a background QThread to avoid blocking the UI.
 from __future__ import annotations
 
 import os
+import sys
+import tempfile
+import traceback
 from enum import Enum
 from typing import Optional
 
@@ -94,12 +97,32 @@ class OCRWorker(QThread):
         # Lazy-import easyocr (slow to import, so do it here in the thread)
         try:
             import easyocr
-        except ImportError:
-            self.error.emit(
-                "easyocr가 설치되지 않았습니다.\n"
-                "pip install easyocr --break-system-packages\n"
-                "명령어로 설치해주세요."
-            )
+        except ImportError as e:
+            detail = f"{type(e).__name__}: {e}"
+            log_path = ""
+            try:
+                log_path = os.path.join(tempfile.gettempdir(), "pdfprotool_ocr_import_error.log")
+                with open(log_path, "w", encoding="utf-8") as f:
+                    traceback.print_exc(file=f)
+            except Exception:
+                log_path = ""
+
+            if getattr(sys, "frozen", False):
+                msg = (
+                    "OCR 엔진 로딩에 실패했습니다.\n"
+                    f"상세: {detail}\n"
+                )
+                if log_path:
+                    msg += f"로그: {log_path}\n"
+                msg += "앱 폴더를 새로 받고 다시 실행해주세요."
+                self.error.emit(msg)
+            else:
+                self.error.emit(
+                    "easyocr import 실패\n"
+                    f"상세: {detail}\n"
+                    "pip install easyocr --break-system-packages\n"
+                    "명령어로 설치해주세요."
+                )
             return
 
         os.makedirs(self._model_dir, exist_ok=True)
@@ -250,3 +273,4 @@ class OCRManager:
         if self._current_worker and self._current_worker.isRunning():
             self._current_worker.cancel()
             self._current_worker.wait(msecs=2000)
+

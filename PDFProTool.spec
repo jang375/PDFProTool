@@ -1,15 +1,59 @@
 # -*- mode: python ; coding: utf-8 -*-
 
+from PyInstaller.utils.hooks import (
+    collect_data_files,
+    collect_dynamic_libs,
+    collect_submodules,
+)
+
+easyocr_hiddenimports = collect_submodules('easyocr')
+torchvision_hiddenimports = collect_submodules('torchvision')
+skimage_hiddenimports = collect_submodules('skimage')
+imageio_hiddenimports = collect_submodules('imageio')
+
+easyocr_datas = collect_data_files('easyocr')
+torchvision_datas = collect_data_files('torchvision')
+skimage_datas = collect_data_files('skimage')
+imageio_datas = collect_data_files('imageio')
+
+torch_binaries = collect_dynamic_libs('torch')
+torchvision_binaries = collect_dynamic_libs('torchvision')
+
 
 a = Analysis(
     ['main.py'],
     pathex=[],
-    binaries=[],
+    binaries=torch_binaries + torchvision_binaries,
     datas=[
         ('pdf_icon_512.png', '.'),
         ('pdf_tool.ico', '.'),
-    ],
-    hiddenimports=['PyQt6.QtCore', 'PyQt6.QtGui', 'PyQt6.QtWidgets', 'fitz', 'pymupdf', 'PIL', 'easyocr', 'torch', 'torchvision', 'numpy', 'cv2', 'PIL.Image', 'scipy', 'pyclipper', 'bidi', 'bidi.algorithm', 'skimage', 'imageio', 'google.genai', 'google.genai.types', 'google.auth', 'google.auth.transport', 'google.auth.transport.requests', 'httpx'],
+    ] + easyocr_datas + torchvision_datas + skimage_datas + imageio_datas,
+    hiddenimports=[
+        'PyQt6.QtCore',
+        'PyQt6.QtGui',
+        'PyQt6.QtWidgets',
+        'fitz',
+        'pymupdf',
+        'PIL',
+        'easyocr',
+        'torch',
+        'torchvision',
+        'numpy',
+        'cv2',
+        'PIL.Image',
+        'scipy',
+        'pyclipper',
+        'bidi',
+        'bidi.algorithm',
+        'skimage',
+        'imageio',
+        'google.genai',
+        'google.genai.types',
+        'google.auth',
+        'google.auth.transport',
+        'google.auth.transport.requests',
+        'httpx',
+    ] + easyocr_hiddenimports + torchvision_hiddenimports + skimage_hiddenimports + imageio_hiddenimports,
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
