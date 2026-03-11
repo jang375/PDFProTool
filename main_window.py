@@ -1632,11 +1632,15 @@ class MainWindow(QMainWindow):
         worker.page_done.connect(self._on_ocr_page_done)
         worker.finished_ocr.connect(self._on_ocr_finished)
         worker.error.connect(self._on_ocr_error)
+        worker.status.connect(self._on_ocr_status)
 
     def _on_ocr_progress(self, current: int, total: int):
         self._ocr_progress_bar.setMaximum(total)
         self._ocr_progress_bar.setValue(current)
         self._set_status(f"OCR {current}/{total}...")
+
+    def _on_ocr_status(self, msg: str):
+        self._set_status(msg)
 
     def _on_ocr_page_done(self, page_index: int, text: str):
         """OCR 텍스트가 PDF 페이지에 투명 텍스트로 삽입됨 — 뷰어 갱신."""

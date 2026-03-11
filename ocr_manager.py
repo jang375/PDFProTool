@@ -6,12 +6,16 @@ Runs OCR in a background QThread to avoid blocking the UI.
 
 from __future__ import annotations
 
-import io
+import os
 from enum import Enum
-from typing import Callable, Optional
+from typing import Optional
 
 import fitz  # PyMuPDF
 from PyQt6.QtCore import QThread, pyqtSignal
+
+
+# Store OCR models in user profile so first download is reused forever.
+DEFAULT_OCR_MODEL_DIR = os.path.join(os.path.expanduser("~"), ".PDFProTool", "easyocr", "model")
 
 
 # ─────────────────────────────────────────────
@@ -19,10 +23,10 @@ from PyQt6.QtCore import QThread, pyqtSignal
 # ─────────────────────────────────────────────
 
 class OCRLanguage(Enum):
-    KOREAN_ENGLISH  = ("한국어+영어",  ["ko", "en"])
-    ENGLISH         = ("영어",         ["en"])
+    KOREAN_ENGLISH = ("한국어+영어", ["ko", "en"])
+    ENGLISH = ("영어", ["en"])
     JAPANESE_ENGLISH = ("일본어+영어", ["ja", "en"])
-    CHINESE_ENGLISH  = ("중국어+영어", ["ch_sim", "en"])
+    CHINESE_ENGLISH = ("중국어+영어", ["ch_sim", "en"])
 
     def __init__(self, label: str, lang_codes: list[str]):
         self.label = label
@@ -45,6 +49,8 @@ class OCRWorker(QThread):
 
     # Emits (current_page, total_pages)
     progress = pyqtSignal(int, int)
+    # Emits status text for UI
+    status = pyqtSignal(str)
     # Emits (page_index, recognized_text)
     page_done = pyqtSignal(int, str)
     # Emits (total_char_count, doc_bytes) on completion
@@ -56,12 +62,13 @@ class OCRWorker(QThread):
         self,
         file_path: str,
         language: OCRLanguage,
+        model_dir: str = DEFAULT_OCR_MODEL_DIR,
         parent=None,
     ):
         super().__init__(parent)
         self._file_path = file_path
         self.language = language
-        self._reader = None  # lazy-loaded
+        self._model_dir = model_dir
         self._cancelled = False
 
     def cancel(self):
@@ -72,6 +79,16 @@ class OCRWorker(QThread):
             self._run_ocr()
         except Exception as e:
             self.error.emit(str(e))
+
+    @staticmethod
+    def _has_any_model_file(model_dir: str) -> bool:
+        if not os.path.isdir(model_dir):
+            return False
+        for name in os.listdir(model_dir):
+            p = os.path.join(model_dir, name)
+            if os.path.isfile(p) and name.lower().endswith((".pth", ".onnx")):
+                return True
+        return False
 
     def _run_ocr(self):
         # Lazy-import easyocr (slow to import, so do it here in the thread)
@@ -85,11 +102,41 @@ class OCRWorker(QThread):
             )
             return
 
+        os.makedirs(self._model_dir, exist_ok=True)
+        had_model_before = self._has_any_model_file(self._model_dir)
+
+        # Reader() downloads missing models on first run.
+        if not had_model_before:
+            self.status.emit("OCR 모델 다운로드 중... (최초 1회)")
+        else:
+            self.status.emit("OCR 엔진 준비 중...")
+
+        try:
+            reader = easyocr.Reader(
+                self.language.lang_codes,
+                gpu=False,
+                verbose=False,
+                model_storage_directory=self._model_dir,
+                download_enabled=True,
+            )
+        except Exception as e:
+            if not had_model_before:
+                self.error.emit(
+                    "OCR 모델 다운로드/초기화에 실패했습니다.\n"
+                    f"모델 경로: {self._model_dir}\n"
+                    f"오류: {e}"
+                )
+            else:
+                self.error.emit(f"OCR 초기화 실패: {e}")
+            return
+
+        if not had_model_before and self._has_any_model_file(self._model_dir):
+            self.status.emit("OCR 모델 다운로드 완료")
+
         # Open a worker-private document instance to avoid threading conflicts
         doc = fitz.open(self._file_path)
         try:
             page_count = doc.page_count
-            reader = easyocr.Reader(self.language.lang_codes, gpu=False, verbose=False)
             total_chars = 0
 
             for i in range(page_count):
@@ -111,7 +158,7 @@ class OCRWorker(QThread):
                     text = self._ocr_page(reader, page)
                     self.page_done.emit(i, text)
                     total_chars += len(text)
-                except Exception as e:
+                except Exception:
                     self.page_done.emit(i, "")
 
             # OCR 텍스트가 삽입된 doc을 bytes로 직렬화하여 메인 스레드에 전달
@@ -124,9 +171,9 @@ class OCRWorker(QThread):
         """Return a font that supports the OCR language glyphs."""
         if self.language == OCRLanguage.KOREAN_ENGLISH:
             return fitz.Font("korea")
-        elif self.language == OCRLanguage.JAPANESE_ENGLISH:
+        if self.language == OCRLanguage.JAPANESE_ENGLISH:
             return fitz.Font("japan")
-        elif self.language == OCRLanguage.CHINESE_ENGLISH:
+        if self.language == OCRLanguage.CHINESE_ENGLISH:
             return fitz.Font("china-s")
         return fitz.Font("helv")
 
@@ -184,8 +231,9 @@ class OCRManager:
         worker.finished_ocr.connect(...)
     """
 
-    def __init__(self):
+    def __init__(self, model_dir: str = DEFAULT_OCR_MODEL_DIR):
         self._current_worker: Optional[OCRWorker] = None
+        self._model_dir = model_dir
 
     def start(self, file_path: str, language: OCRLanguage) -> OCRWorker:
         """Cancel any running OCR and start a new one. Returns the worker."""
@@ -193,7 +241,7 @@ class OCRManager:
             self._current_worker.cancel()
             self._current_worker.wait(msecs=2000)
 
-        worker = OCRWorker(file_path, language)
+        worker = OCRWorker(file_path, language, model_dir=self._model_dir)
         self._current_worker = worker
         worker.start()
         return worker

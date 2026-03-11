@@ -48,6 +48,15 @@ def is_newer(remote: str, local: str) -> bool:
         return False
 
 
+def _normalize_tag(v: str) -> str:
+    s = (v or "").strip()
+    if not s:
+        return ""
+    if s.lower().startswith("v"):
+        return s
+    return f"v{s}"
+
+
 # ─────────────────────────────────────────────
 # 업데이트 확인 스레드
 # ─────────────────────────────────────────────
@@ -71,19 +80,29 @@ class UpdateCheckWorker(QThread):
                 self.no_update.emit()
                 return
 
-            # 에셋 찾기 (.zip 우선, .exe 폴백)
+            # 에셋 선택: delta zip 우선, full zip 차선, exe 폴백
             download_url = ""
             exe_url = ""
+            full_zip_url = ""
+            delta_zip_url = ""
+
+            remote_tag = _normalize_tag(tag).lower()
+            local_tag = _normalize_tag(__version__).lower()
+            target_delta_name = f"pdfprotool-delta-from-{local_tag}-to-{remote_tag}.zip"
+
             for asset in data.get("assets", []):
                 name: str = asset.get("name", "")
                 url: str = asset.get("browser_download_url", "")
-                if name.lower().endswith(".zip"):
-                    download_url = url
-                    break
-                elif name.lower().endswith(".exe") and not exe_url:
+                lower_name = name.lower()
+
+                if lower_name == target_delta_name:
+                    delta_zip_url = url
+                elif lower_name.endswith(".zip") and "delta-from-" not in lower_name and not full_zip_url:
+                    full_zip_url = url
+                elif lower_name.endswith(".exe") and not exe_url:
                     exe_url = url
-            if not download_url:
-                download_url = exe_url
+
+            download_url = delta_zip_url or full_zip_url or exe_url
 
             if not download_url:
                 self.error.emit("새 버전이 있지만 다운로드 가능한 파일을 찾을 수 없습니다.")
@@ -457,8 +476,84 @@ if exist "{current_exe}" start "" "{current_exe}"
         else:
             source_dir = extract_dir
 
-        bat_content = bat_header + f"""
-echo [%date% %time%] 업데이트 시작 (zip 모드) >> "%LOG%"
+        # Delta zip 형식:
+        #   payload/<relative files>
+        #   delete_files.txt  (optional)
+        delta_root = source_dir if os.path.isdir(os.path.join(source_dir, "payload")) else None
+        if delta_root is None and os.path.isdir(os.path.join(extract_dir, "payload")):
+            delta_root = extract_dir
+
+        is_delta = delta_root is not None
+        delta_payload_dir = os.path.join(delta_root, "payload") if is_delta else ""
+        delta_delete_file = os.path.join(delta_root, "delete_files.txt") if is_delta else ""
+
+        if is_delta:
+            bat_content = bat_header + f"""
+echo [%date% %time%] 업데이트 시작 (delta zip 모드) >> "%LOG%"
+echo [%date% %time%] PID={pid} exe="{current_exe}" >> "%LOG%"
+echo [%date% %time%] payload="{delta_payload_dir}" >> "%LOG%"
+echo [%date% %time%] delete_list="{delta_delete_file}" >> "%LOG%"
+echo [%date% %time%] app_dir="{app_dir}" >> "%LOG%"
+
+:: 프로세스 강제 종료 후 대기
+taskkill /PID {pid} /F >nul 2>&1
+ping -n 5 127.0.0.1 >nul 2>&1
+
+:: 프로세스 완전 종료 대기 (최대 15초)
+set RETRY=0
+:wait_loop
+tasklist /FI "PID eq {pid}" 2>nul | find /I "{pid}" >nul
+if not errorlevel 1 (
+    set /a RETRY+=1
+    if !RETRY! GEQ 15 (
+        echo [%date% %time%] ERROR: 프로세스 종료 대기 타임아웃 >> "%LOG%"
+        goto :cleanup_exit
+    )
+    ping -n 2 127.0.0.1 >nul 2>&1
+    goto wait_loop
+)
+echo [%date% %time%] 프로세스 종료 확인 >> "%LOG%"
+
+:: 파일 잠금 해제 대기 (추가 5초)
+ping -n 6 127.0.0.1 >nul 2>&1
+
+:: 삭제 목록 반영 (필요 시)
+if exist "{delta_delete_file}" (
+    for /f "usebackq delims=" %%D in ("{delta_delete_file}") do (
+        if not "%%D"=="" (
+            if exist "{app_dir}\\%%D\\\\NUL" (
+                rmdir /S /Q "{app_dir}\\%%D" >nul 2>&1
+            ) else (
+                if exist "{app_dir}\\%%D" del /F /Q "{app_dir}\\%%D" >nul 2>&1
+            )
+        )
+    )
+)
+
+:: delta payload만 반영 (/E: 변경분/신규 파일 복사)
+echo [%date% %time%] robocopy /E (delta) 시작 >> "%LOG%"
+robocopy "{delta_payload_dir}" "{app_dir}" /E /R:10 /W:3 /NP >> "%LOG%" 2>&1
+set RC=!errorlevel!
+echo [%date% %time%] robocopy 종료코드: !RC! >> "%LOG%"
+if !RC! GEQ 8 (
+    echo [%date% %time%] ERROR: delta robocopy 실패 (코드 !RC!) >> "%LOG%"
+    goto :cleanup_exit
+)
+echo [%date% %time%] delta 파일 반영 완료 >> "%LOG%"
+""" + bat_footer + f"""
+if exist "{downloaded_path}" del /Q "{downloaded_path}" >nul 2>&1
+if exist "{extract_dir}" rmdir /S /Q "{extract_dir}" >nul 2>&1
+echo [%date% %time%] 업데이트 완료! >> "%LOG%"
+goto :eof
+
+:cleanup_exit
+""" + bat_footer_fail + f"""
+:eof
+del "%~f0" >nul 2>&1
+"""
+        else:
+            bat_content = bat_header + f"""
+echo [%date% %time%] 업데이트 시작 (full zip 모드) >> "%LOG%"
 echo [%date% %time%] PID={pid} exe="{current_exe}" >> "%LOG%"
 echo [%date% %time%] source="{source_dir}" >> "%LOG%"
 echo [%date% %time%] app_dir="{app_dir}" >> "%LOG%"
@@ -654,3 +749,4 @@ class UpdateManager:
 
     def _on_error(self, msg: str):
         logger.warning(f"업데이트 확인 실패: {msg}")
+

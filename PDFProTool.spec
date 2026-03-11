@@ -1,7 +1,5 @@
 # -*- mode: python ; coding: utf-8 -*-
-import os
 
-EASYOCR_MODEL_DIR = os.path.expanduser('~/.EasyOCR/model')
 
 a = Analysis(
     ['main.py'],
@@ -10,7 +8,6 @@ a = Analysis(
     datas=[
         ('pdf_icon_512.png', '.'),
         ('pdf_tool.ico', '.'),
-        (EASYOCR_MODEL_DIR, '.EasyOCR/model'),
     ],
     hiddenimports=['PyQt6.QtCore', 'PyQt6.QtGui', 'PyQt6.QtWidgets', 'fitz', 'pymupdf', 'PIL', 'easyocr', 'torch', 'torchvision', 'numpy', 'cv2', 'PIL.Image', 'scipy', 'pyclipper', 'bidi', 'bidi.algorithm', 'skimage', 'imageio', 'google.genai', 'google.genai.types', 'google.auth', 'google.auth.transport', 'google.auth.transport.requests', 'httpx'],
     hookspath=[],
