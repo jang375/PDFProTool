@@ -150,6 +150,8 @@ class TextToolConfig:
             "text": self.text,
             "font_name": self.font_name,
             "font_size": self.font_size,
+            "bold": self.bold,
+            "italic": self.italic,
             "color": self.color_rgb,
         }
 
@@ -166,6 +168,7 @@ class StampPanel(QWidget):
 
     def __init__(self, stamp_mgr: StampManager, parent=None):
         super().__init__(parent)
+        self.setObjectName("sidePanel")
         self._stamp_mgr = stamp_mgr
         self.setFixedWidth(260)
         self._build_ui()
@@ -179,34 +182,29 @@ class StampPanel(QWidget):
 
         # Header
         header = QWidget()
-        header.setStyleSheet("background: #f5f5f5; border-bottom: 1px solid #e0e0e0;")
+        header.setObjectName("panelHeader")
         hl = QHBoxLayout(header)
         hl.setContentsMargins(12, 8, 8, 8)
         title = QLabel("직인 / Stamps")
-        title.setStyleSheet("font-weight: bold; font-size: 13px;")
+        title.setObjectName("panelTitle")
         hl.addWidget(title)
         hl.addStretch()
         close_btn = QPushButton("x")
         close_btn.setFixedSize(24, 24)
-        close_btn.setStyleSheet(
-            "QPushButton { padding: 0px; font-size: 13px; font-weight: bold;"
-            " border: none; background: transparent; color: #666; }"
-            "QPushButton:hover { color: #333; background: #e0e0e0; border-radius: 3px; }"
-        )
+        close_btn.setObjectName("panelCloseButton")
         close_btn.clicked.connect(self.closed.emit)
         hl.addWidget(close_btn)
         layout.addWidget(header)
 
         # Add button
         add_btn = QPushButton("+ 직인 추가")
+        add_btn.setObjectName("primaryButton")
         add_btn.clicked.connect(self._add_stamp)
-        add_btn.setStyleSheet("margin: 8px; padding: 6px;")
         layout.addWidget(add_btn)
 
         # Stamp grid
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
-        scroll.setStyleSheet("QScrollArea { border: none; background: #fafafa; }")
         self._grid_container = QWidget()
         self._grid_layout = QGridLayout(self._grid_container)
         self._grid_layout.setContentsMargins(8, 8, 8, 8)
@@ -238,9 +236,7 @@ class StampPanel(QWidget):
 
     def _make_stamp_cell(self, stamp: StampEntry, idx: int) -> QWidget:
         w = QWidget()
-        w.setStyleSheet(
-            "border: 1px solid #ddd; border-radius: 6px; background: white;"
-        )
+        w.setObjectName("previewCard")
         w.setFixedSize(108, 90)
         vl = QVBoxLayout(w)
         vl.setContentsMargins(4, 4, 4, 4)
@@ -300,6 +296,7 @@ class TextToolPanel(QWidget):
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        self.setObjectName("sidePanel")
         self.setFixedWidth(260)
         self._config = TextToolConfig()
         self._last_font_params = None
@@ -332,109 +329,139 @@ class TextToolPanel(QWidget):
 
         # Header
         header = QWidget()
-        header.setStyleSheet("background: #f5f5f5; border-bottom: 1px solid #e0e0e0;")
+        header.setObjectName("panelHeader")
         hl = QHBoxLayout(header)
         hl.setContentsMargins(12, 8, 8, 8)
         title = QLabel("텍스트 도구")
-        title.setStyleSheet("font-weight: bold; font-size: 13px;")
+        title.setObjectName("panelTitle")
         hl.addWidget(title)
         hl.addStretch()
         cancel_btn = QPushButton("x")
         cancel_btn.setFixedSize(24, 24)
-        cancel_btn.setStyleSheet(
-            "QPushButton { padding: 0px; font-size: 13px; font-weight: bold;"
-            " border: none; background: transparent; color: #666; }"
-            "QPushButton:hover { color: #333; background: #e0e0e0; border-radius: 3px; }"
-        )
+        cancel_btn.setObjectName("panelCloseButton")
         cancel_btn.clicked.connect(self.cancel_requested.emit)
         hl.addWidget(cancel_btn)
         layout.addWidget(header)
 
-        # scroll = QScrollArea()
-        # scroll.setWidgetResizable(True)
-        # scroll.setStyleSheet("QScrollArea { border: none; background: #fafafa; }")
-        
         container = QWidget()
+        container.setObjectName("textToolBody")
         vl = QVBoxLayout(container)
         vl.setContentsMargins(12, 12, 12, 12)
         vl.setSpacing(10)
 
         # Text input
         lbl1 = QLabel("텍스트")
-        lbl1.setStyleSheet("font-size: 10px; color: #888; font-weight: bold;")
+        lbl1.setObjectName("panelSectionLabel")
         vl.addWidget(lbl1)
         self._text_edit = QLineEdit()
+        self._text_edit.setObjectName("textPrimaryInput")
         self._text_edit.setFixedHeight(40)
         self._text_edit.setText(self._config.text)
         self._text_edit.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
-        self._text_edit.setStyleSheet(
-            "QLineEdit { border: 1px solid #ccc; border-radius: 4px; padding: 4px; "
-            "font-size: 13px; background: white; }"
-            "QLineEdit:focus { border: 2px solid #2979FF; }"
-        )
         self._text_edit.textChanged.connect(self._update_config)
         vl.addWidget(self._text_edit)
 
         # Preview
         self._preview_label = QLabel(self._config.text)
+        self._preview_label.setObjectName("previewCard")
         self._preview_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self._preview_label.setStyleSheet(
-            "background: white; border: 1px solid #ddd; border-radius: 6px; "
-            "padding: 8px; min-height: 40px;"
-        )
+        self._preview_label.setMinimumHeight(56)
         self._preview_label.setWordWrap(True)
         vl.addWidget(self._preview_label)
 
         # Font family — QLineEdit+QCompleter instead of QComboBox
         # QComboBox.addItems() with 500+ fonts freezes UI on Windows
         lbl2 = QLabel("FONT")
-        lbl2.setStyleSheet("font-size: 10px; color: #888; font-weight: bold;")
+        lbl2.setObjectName("panelSectionLabel")
         vl.addWidget(lbl2)
+
+        font_row = QHBoxLayout()
+        font_row.setSpacing(6)
         self._font_combo = QLineEdit()
+        self._font_combo.setObjectName("fontFamilyInput")
         self._font_combo.setText(self._config.font_name)
         self._font_combo.setPlaceholderText("폰트 이름 입력...")
-        self._font_combo.setStyleSheet(
-            "QLineEdit { border: 1px solid #ccc; border-radius: 4px; padding: 4px; font-size: 12px; }"
-        )
         self._font_combo.textChanged.connect(self._on_font_changed)
-        vl.addWidget(self._font_combo)
+        font_row.addWidget(self._font_combo, 1)
+
+        self._font_popup_btn = QToolButton()
+        self._font_popup_btn.setObjectName("fontPopupButton")
+        self._font_popup_btn.setText("▼")
+        self._font_popup_btn.setToolTip("폰트 목록")
+        self._font_popup_btn.setFixedSize(30, 30)
+        self._font_popup_btn.pressed.connect(self._show_font_popup)
+        font_row.addWidget(self._font_popup_btn)
+        vl.addLayout(font_row)
+
         # Attach completer after fonts are ready
         self._schedule_font_populate()
 
         # Style & size row
         style_row = QHBoxLayout()
         self._style_combo = QComboBox()
+        self._style_combo.setObjectName("fontStyleCombo")
         self._style_combo.addItems(["Regular", "Bold", "Italic", "Bold Italic"])
         self._style_combo.currentTextChanged.connect(self._on_style_changed)
         style_row.addWidget(self._style_combo)
-        style_row.addStretch()
-        lbl_pt = QLabel("pt:")
-        lbl_pt.setStyleSheet("font-size: 11px;")
+
+        lbl_pt = QLabel("pt")
+        lbl_pt.setObjectName("panelInlineHint")
         style_row.addWidget(lbl_pt)
+
         self._size_spin = QDoubleSpinBox()
+        self._size_spin.setObjectName("fontSizeSpin")
         self._size_spin.setRange(6, 200)
         self._size_spin.setSingleStep(1)
         self._size_spin.setValue(self._config.font_size)
-        self._size_spin.setFixedWidth(64)
+        self._size_spin.setFixedWidth(72)
         self._size_spin.valueChanged.connect(self._on_size_changed)
         style_row.addWidget(self._size_spin)
         vl.addLayout(style_row)
 
+        quick_style_row = QHBoxLayout()
+        quick_style_row.setSpacing(8)
+        self._bold_btn = QToolButton()
+        self._bold_btn.setObjectName("styleToggleButton")
+        self._bold_btn.setText("B")
+        self._bold_btn.setCheckable(True)
+        self._bold_btn.setFixedSize(36, 32)
+        self._bold_btn.setToolTip("굵게")
+        self._bold_btn.toggled.connect(self._on_quick_style_toggled)
+        quick_style_row.addWidget(self._bold_btn)
+
+        self._italic_btn = QToolButton()
+        self._italic_btn.setObjectName("styleToggleButton")
+        self._italic_btn.setText("I")
+        self._italic_btn.setCheckable(True)
+        self._italic_btn.setFixedSize(36, 32)
+        self._italic_btn.setToolTip("기울임")
+        self._italic_btn.toggled.connect(self._on_quick_style_toggled)
+        quick_style_row.addWidget(self._italic_btn)
+        quick_style_row.addStretch()
+        vl.addLayout(quick_style_row)
+
         # Colors
         lbl3 = QLabel("COLOR")
-        lbl3.setStyleSheet("font-size: 10px; color: #888; font-weight: bold;")
+        lbl3.setObjectName("panelSectionLabel")
         vl.addWidget(lbl3)
         color_row = QHBoxLayout()
+        color_row.setSpacing(8)
+
+        self._color_buttons: list[QPushButton] = []
         for hex_color in PRESET_COLORS:
             btn = QPushButton()
+            btn.setObjectName("colorSwatch")
+            btn.setCheckable(True)
             btn.setFixedSize(24, 24)
-            btn.setStyleSheet(
-                f"background: {hex_color}; border-radius: 12px; border: 1px solid #ccc;"
-            )
+            btn.setProperty("swatchColor", hex_color)
+            btn.setStyleSheet(f"background: {hex_color};")
             btn.clicked.connect(lambda _, h=hex_color: self._set_color(h))
             color_row.addWidget(btn)
+            self._color_buttons.append(btn)
+
         color_row.addStretch()
         custom_color_btn = QPushButton("…")
+        custom_color_btn.setObjectName("colorCustomButton")
         custom_color_btn.setFixedSize(24, 24)
         custom_color_btn.clicked.connect(self._pick_custom_color)
         color_row.addWidget(custom_color_btn)
@@ -442,10 +469,8 @@ class TextToolPanel(QWidget):
 
         # Color preview
         self._color_preview = QLabel()
-        self._color_preview.setFixedHeight(20)
-        self._color_preview.setStyleSheet(
-            f"background: {self._config.color_hex}; border-radius: 4px; border: 1px solid #ccc;"
-        )
+        self._color_preview.setObjectName("colorPreviewBar")
+        self._color_preview.setFixedHeight(16)
         vl.addWidget(self._color_preview)
 
         vl.addStretch()
@@ -453,12 +478,9 @@ class TextToolPanel(QWidget):
         # Action buttons
         btn_row = QHBoxLayout()
         apply_btn = QPushButton("적용")
-        apply_btn.setStyleSheet(
-            "background: #2979FF; color: white; padding: 6px 16px; border-radius: 4px;"
-        )
+        apply_btn.setObjectName("primaryButton")
         apply_btn.clicked.connect(self._on_apply)
         cancel_btn2 = QPushButton("취소")
-        cancel_btn2.setStyleSheet("padding: 6px 16px; border-radius: 4px;")
         cancel_btn2.clicked.connect(self.cancel_requested.emit)
         btn_row.addWidget(apply_btn)
         btn_row.addWidget(cancel_btn2)
@@ -466,6 +488,8 @@ class TextToolPanel(QWidget):
 
         # Add container to main layout AFTER populating it
         layout.addWidget(container)
+        self._sync_style_controls()
+        self._set_color(self._config.color_hex)
 
     def _schedule_font_populate(self):
         """폰트가 준비되면 QCompleter를 붙인다 (메인 스레드, 논블로킹)."""
@@ -500,6 +524,54 @@ class TextToolPanel(QWidget):
         completer.setFilterMode(Qt.MatchFlag.MatchContains)
         self._font_combo.setCompleter(completer)
 
+    def _show_font_popup(self):
+        """Open full font list popup when the dropdown button is clicked."""
+        from PyQt6.QtWidgets import QCompleter, QFontDialog
+
+        if not self._font_combo.completer():
+            self._populate_font_combo()
+
+        completer = self._font_combo.completer()
+        if not completer:
+            return
+
+        self._font_combo.setFocus(Qt.FocusReason.OtherFocusReason)
+
+        popup = completer.popup()
+        popup_w = max(self._font_combo.width() + self._font_popup_btn.width() + 6, 240)
+        if popup:
+            popup.setMinimumWidth(popup_w)
+
+        # Dropdown button intent: show full list regardless of current text.
+        completer.setCompletionMode(QCompleter.CompletionMode.UnfilteredPopupCompletion)
+        completer.setCompletionPrefix("")
+
+        before_text = self._font_combo.text()
+        anchor = self._font_combo.rect()
+        anchor.setWidth(popup_w)
+        anchor.moveTop(anchor.bottom() + 2)
+        completer.complete(anchor)
+
+        def _fallback_font_dialog():
+            try:
+                # If popup is visible (normal case) or the text already changed,
+                # skip fallback dialog.
+                popup2 = completer.popup()
+                if (popup2 and popup2.isVisible()) or self._font_combo.text() != before_text:
+                    return
+
+                base_name = self._font_combo.text().strip() or self._config.font_name
+                base_font = QFont(base_name, int(self._config.font_size))
+                font, ok = QFontDialog.getFont(base_font, self, "폰트 선택")
+                if ok:
+                    self._font_combo.setText(font.family())
+            except RuntimeError:
+                pass
+
+        # Some Windows environments fail to show completer popup reliably.
+        # Fallback to native font dialog so the button always responds.
+        QTimer.singleShot(120, _fallback_font_dialog)
+
     def _update_config(self, text=None):
         self._config.text = self._text_edit.text()
         # 즉시 호출 대신 디바운스 타이머로 미리보기 지연 갱신
@@ -507,13 +579,47 @@ class TextToolPanel(QWidget):
         self._preview_timer.start()
 
     def _on_font_changed(self, name: str):
+        from PyQt6.QtWidgets import QCompleter
+
         self._config.font_name = name
+        completer = self._font_combo.completer()
+        if completer and completer.completionMode() != QCompleter.CompletionMode.PopupCompletion:
+            # Restore normal typed filtering after a dropdown selection/edit.
+            completer.setCompletionMode(QCompleter.CompletionMode.PopupCompletion)
         self._preview_timer.start()
 
     def _on_style_changed(self, style: str):
         self._config.bold = "Bold" in style
         self._config.italic = "Italic" in style
+        self._sync_style_controls(source="combo")
         self._refresh_preview()
+
+    def _on_quick_style_toggled(self, _checked: bool):
+        self._config.bold = self._bold_btn.isChecked()
+        self._config.italic = self._italic_btn.isChecked()
+        self._sync_style_controls(source="buttons")
+        self._refresh_preview()
+
+    def _sync_style_controls(self, source: str = ""):
+        if source != "buttons":
+            self._bold_btn.blockSignals(True)
+            self._italic_btn.blockSignals(True)
+            self._bold_btn.setChecked(self._config.bold)
+            self._italic_btn.setChecked(self._config.italic)
+            self._bold_btn.blockSignals(False)
+            self._italic_btn.blockSignals(False)
+
+        if source != "combo":
+            style = "Regular"
+            if self._config.bold and self._config.italic:
+                style = "Bold Italic"
+            elif self._config.bold:
+                style = "Bold"
+            elif self._config.italic:
+                style = "Italic"
+            self._style_combo.blockSignals(True)
+            self._style_combo.setCurrentText(style)
+            self._style_combo.blockSignals(False)
 
     def _on_size_changed(self, val: float):
         self._config.font_size = val
@@ -522,9 +628,18 @@ class TextToolPanel(QWidget):
     def _set_color(self, hex_color: str):
         self._config.color_hex = hex_color
         self._color_preview.setStyleSheet(
-            f"background: {hex_color}; border-radius: 4px; border: 1px solid #ccc;"
+            f"background: {hex_color}; border: 1px solid #E5E7EB; border-radius: 8px;"
         )
+        self._sync_color_buttons()
         self._refresh_preview()
+
+    def _sync_color_buttons(self):
+        current = (self._config.color_hex or "").lower()
+        for btn in getattr(self, "_color_buttons", []):
+            swatch = str(btn.property("swatchColor") or "").lower()
+            btn.blockSignals(True)
+            btn.setChecked(swatch == current)
+            btn.blockSignals(False)
 
     def _pick_custom_color(self):
         color = QColorDialog.getColor(
@@ -535,8 +650,13 @@ class TextToolPanel(QWidget):
 
     def _refresh_preview(self):
         self._preview_label.setText(self._config.text or "미리보기")
-        
-        current_font_params = (self._config.font_name, self._config.font_size, self._config.bold, self._config.italic)
+
+        current_font_params = (
+            self._config.font_name,
+            self._config.font_size,
+            self._config.bold,
+            self._config.italic,
+        )
         if self._last_font_params != current_font_params:
             font = QFont(self._config.font_name, int(min(self._config.font_size, 18)))
             font.setBold(self._config.bold)
@@ -546,8 +666,8 @@ class TextToolPanel(QWidget):
 
         # 같은 스타일이면 setStyleSheet 생략 (Qt6 스타일 재계산 비용 절약)
         new_style = (
-            f"background: white; border: 1px solid #ddd; border-radius: 6px; "
-            f"padding: 8px; min-height: 40px; color: {self._config.color_hex};"
+            f"background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 10px; "
+            f"padding: 10px; min-height: 40px; color: {self._config.color_hex};"
         )
         if self._preview_label.styleSheet() != new_style:
             self._preview_label.setStyleSheet(new_style)
@@ -559,9 +679,10 @@ class TextToolPanel(QWidget):
     def load_config(self, config: TextToolConfig):
         self._config = config
         self._text_edit.setText(config.text)
-        # _font_combo is now QLineEdit
+        # _font_combo is QLineEdit
         self._font_combo.setText(config.font_name)
         self._size_spin.setValue(config.font_size)
+        self._sync_style_controls()
         self._set_color(config.color_hex)
         self._refresh_preview()
 
@@ -583,6 +704,7 @@ class SearchResultsPanel(QWidget):
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        self.setObjectName("sidePanel")
         self.setFixedWidth(280)
         self._results: list[tuple[int, object, str]] = []  # (page, rect, snippet)
         self._current_idx: int = -1
@@ -595,40 +717,31 @@ class SearchResultsPanel(QWidget):
 
         # Header
         header = QWidget()
-        header.setStyleSheet("background: #f5f5f5; border-bottom: 1px solid #e0e0e0;")
+        header.setObjectName("panelHeader")
         hl = QHBoxLayout(header)
         hl.setContentsMargins(8, 6, 8, 6)
 
-        _nav_style = (
-            "QPushButton { padding: 0px 4px; font-size: 12px; font-weight: bold;"
-            " border: 1px solid #bbb; border-radius: 3px; background: #f0f0f0; }"
-            "QPushButton:hover { background: #e0e0e0; }"
-        )
         self._prev_btn = QPushButton("<")
+        self._prev_btn.setObjectName("panelNavButton")
         self._prev_btn.setFixedSize(28, 24)
-        self._prev_btn.setStyleSheet(_nav_style)
         self._prev_btn.clicked.connect(lambda: self._navigate(-1))
         hl.addWidget(self._prev_btn)
 
         self._next_btn = QPushButton(">")
+        self._next_btn.setObjectName("panelNavButton")
         self._next_btn.setFixedSize(28, 24)
-        self._next_btn.setStyleSheet(_nav_style)
         self._next_btn.clicked.connect(lambda: self._navigate(1))
         hl.addWidget(self._next_btn)
 
         hl.addStretch()
 
         self._count_label = QLabel("0건")
-        self._count_label.setStyleSheet("font-size: 12px; color: #666;")
+        self._count_label.setObjectName("panelSubtle")
         hl.addWidget(self._count_label)
 
         close_btn = QPushButton("x")
         close_btn.setFixedSize(24, 24)
-        close_btn.setStyleSheet(
-            "QPushButton { padding: 0px; font-size: 13px; font-weight: bold;"
-            " border: none; background: transparent; color: #666; }"
-            "QPushButton:hover { color: #333; background: #e0e0e0; border-radius: 3px; }"
-        )
+        close_btn.setObjectName("panelCloseButton")
         close_btn.clicked.connect(self.closed.emit)
         hl.addWidget(close_btn)
         layout.addWidget(header)
@@ -700,6 +813,7 @@ class AIToolPanel(QWidget):
 
     def __init__(self, ai_manager: AIManager, parent=None):
         super().__init__(parent)
+        self.setObjectName("sidePanel")
         self.ai_manager = ai_manager
         self.setMinimumWidth(300)
         self._build_ui()
@@ -711,20 +825,16 @@ class AIToolPanel(QWidget):
 
         # Header
         header = QWidget()
-        header.setStyleSheet("background: #f5f5f5; border-bottom: 1px solid #e0e0e0;")
+        header.setObjectName("panelHeader")
         hl = QHBoxLayout(header)
         hl.setContentsMargins(12, 8, 8, 8)
         title = QLabel("✨ AI 도구")
-        title.setStyleSheet("font-weight: bold; font-size: 13px;")
+        title.setObjectName("panelTitle")
         hl.addWidget(title)
         hl.addStretch()
         close_btn = QPushButton("x")
         close_btn.setFixedSize(24, 24)
-        close_btn.setStyleSheet(
-            "QPushButton { padding: 0px; font-size: 13px; font-weight: bold;"
-            " border: none; background: transparent; color: #666; }"
-            "QPushButton:hover { color: #333; background: #e0e0e0; border-radius: 3px; }"
-        )
+        close_btn.setObjectName("panelCloseButton")
         close_btn.clicked.connect(self.closed.emit)
         hl.addWidget(close_btn)
         layout.addWidget(header)
@@ -934,4 +1044,5 @@ class AIToolPanel(QWidget):
         QTimer.singleShot(50, lambda: self._chat_scroll.verticalScrollBar().setValue(
             self._chat_scroll.verticalScrollBar().maximum()
         ))
+
 

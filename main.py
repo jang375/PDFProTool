@@ -29,6 +29,7 @@ from PyQt6.QtWidgets import QApplication, QSplashScreen
 from main_window import MainWindow
 from panels import preload_fonts
 from updater import UpdateManager, cleanup_old_files, is_update_in_progress
+from ui_theme import apply_app_theme
 from version import __version__
 
 
@@ -248,7 +249,10 @@ DARK_STYLE = """
 
 def apply_theme(app: QApplication, is_dark: bool):
     """Apply light or dark theme stylesheet to the application."""
-    app.setStyleSheet(DARK_STYLE if is_dark else LIGHT_STYLE)
+    if is_dark:
+        app.setStyleSheet(DARK_STYLE)
+    else:
+        apply_app_theme(app, is_dark=False)
 
 
 def main():

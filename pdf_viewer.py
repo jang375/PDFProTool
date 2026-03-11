@@ -9,9 +9,11 @@ Supports continuous scroll, zoom, annotation drag/resize/edit.
 from __future__ import annotations
 
 import bisect
+import hashlib
 import logging
 import math
 import os
+import tempfile
 from typing import Optional, Callable
 
 # ── 텍스트 편집 디버그 로그 ─────────────────────────────
@@ -40,20 +42,85 @@ from collections import OrderedDict
 
 
 
-def _resolve_freetext_font(text: str, font_name: str) -> dict:
-    """Return kwargs (fontname) for add_freetext_annot with CJK support.
+def _resolve_freetext_font(
+    text: str,
+    font_name: str,
+    is_bold: bool = False,
+    is_italic: bool = False,
+    is_serif: bool = False,
+) -> dict:
+    """Return kwargs for add_freetext_annot honoring selected family/style.
 
-    Uses PyMuPDF built-in CJK font ("korea") instead of loading system font
-    files (malgun.ttf ~15-20MB) which blocks the main thread for 300-2000ms.
+    IMPORTANT: add_freetext_annot() cannot consume `fontfile`, so arbitrary
+    system font names (e.g. "arial", "malgun") are often ignored. We must map
+    user selection to FreeText-safe built-in PDF font names.
     """
-    has_cjk = any(ord(c) > 0x2E7F for c in text)
-    if not has_cjk:
-        name = font_name if font_name else "helv"
-        if name.lower() in ("helvetica", "arial"):
-            name = "helv"
-        return {"fontname": name}
-    # CJK text — use PyMuPDF built-in CJK font (no file I/O, instant)
-    return {"fontname": "korea"}
+    name = (font_name or "").strip()
+    lower = name.lower().replace("-", "").replace(" ", "").replace("_", "")
+
+    # If we already received a valid built-in name (e.g. while resizing an
+    # existing FreeText annot), keep it unless explicit style override exists.
+    cjk_builtins = {"korea", "japan", "china-s", "china-t"}
+    builtins = {
+        "helv", "heit", "hebo", "hebi",
+        "cour", "coit", "cobo", "cobi",
+        "tiro", "tiit", "tibo", "tibi",
+        *cjk_builtins,
+    }
+    if lower in cjk_builtins:
+        return {"fontname": lower}
+    if lower in builtins and not (is_bold or is_italic):
+        return {"fontname": lower}
+
+    # Respect style words typed in the family input as a fallback.
+    bold = bool(is_bold or any(k in lower for k in ("bold", "heavy", "black", "demi", "semibold")))
+    italic = bool(is_italic or any(k in lower for k in ("italic", "oblique", "slanted")))
+
+    has_cjk = any(ord(c) > 0x2E7F for c in (text or ""))
+    cjk_family_hint = any(
+        k in lower for k in (
+            "malgun", "gothic", "gulim", "dotum", "batang",
+            "gungsuh", "myeongjo", "nanum", "korea", "hangul",
+        )
+    )
+    if has_cjk or cjk_family_hint:
+        # FreeText CJK family choice is limited in PyMuPDF.
+        return {"fontname": "korea"}
+
+    serif_hint = is_serif or any(
+        k in lower for k in (
+            "times", "serif", "georgia", "garamond", "cambria",
+            "palatino", "bookantiqua",
+        )
+    )
+    mono_hint = any(k in lower for k in ("courier", "consol", "mono", "fixed", "code"))
+
+    if mono_hint:
+        if bold and italic:
+            return {"fontname": "cobi"}
+        if bold:
+            return {"fontname": "cobo"}
+        if italic:
+            return {"fontname": "coit"}
+        return {"fontname": "cour"}
+
+    if serif_hint:
+        if bold and italic:
+            return {"fontname": "tibi"}
+        if bold:
+            return {"fontname": "tibo"}
+        if italic:
+            return {"fontname": "tiit"}
+        return {"fontname": "tiro"}
+
+    # Sans-serif default.
+    if bold and italic:
+        return {"fontname": "hebi"}
+    if bold:
+        return {"fontname": "hebo"}
+    if italic:
+        return {"fontname": "heit"}
+    return {"fontname": "helv"}
 
 
 # ─────────────────────────────────────────────
@@ -1073,6 +1140,10 @@ class PDFViewWidget(QWidget):
                             raw = hit.annot.info.get("content", "")
                         self._drag_raw_text = raw
                         self._drag_da = self._parse_annot_da(hit.annot)
+
+                        # 좌클릭만으로 FreeText 편집 패널을 바로 열어 우클릭 의존을 줄인다.
+                        if event.button() == Qt.MouseButton.LeftButton and hit.corner == AnnotHit.BODY:
+                            QTimer.singleShot(0, lambda a=hit.annot, p=hit.page_index: self.annot_edit_requested.emit(a, p))
                 except Exception:
                     pass
 
@@ -1558,7 +1629,9 @@ class PDFViewWidget(QWidget):
         font_size = config.get("font_size", 14.0)
         color = config.get("color", (0, 0, 0))  # RGB 0-1
         font_name = config.get("font_name", "helv")
-        font_kwargs = _resolve_freetext_font(text, font_name)
+        is_bold = bool(config.get("bold", False))
+        is_italic = bool(config.get("italic", False))
+        font_kwargs = _resolve_freetext_font(text, font_name, is_bold=is_bold, is_italic=is_italic)
 
         lines = text.split("\n")
         line_count = max(len(lines), 1)
@@ -1614,7 +1687,9 @@ class PDFViewWidget(QWidget):
         font_size = config.get("font_size", 14.0)
         color = config.get("color", (0, 0, 0))
         font_name = config.get("font_name", "helv")
-        font_kwargs = _resolve_freetext_font(text, font_name)
+        is_bold = bool(config.get("bold", False))
+        is_italic = bool(config.get("italic", False))
+        font_kwargs = _resolve_freetext_font(text, font_name, is_bold=is_bold, is_italic=is_italic)
 
         lines = text.split("\n")
         w = max(max(len(l) for l in lines) * font_size * 0.6, 80) if lines else 80
@@ -1817,10 +1892,8 @@ class PDFViewWidget(QWidget):
 
         Algorithm:
         1. Collect all chars across spans in reading order.
-        2. Compute a per-span *space threshold* = average char width × 0.35.
-           (A gap wider than this is treated as a word separator.)
-        3. Walk through chars; when the gap between the end of one char
-           and the start of the next exceeds the threshold, emit a space.
+        2. Compute robust spacing thresholds from observed glyph widths.
+        3. Emit spaces when gaps clearly exceed glyph-to-glyph spacing.
         """
         if not spans:
             return ""
@@ -1837,8 +1910,9 @@ class PDFViewWidget(QWidget):
             # Concatenate span texts directly.
             return "".join(s.get("text", "") for s in spans)
 
-        # Compute a robust space-threshold from average character width
-        # across the whole line.
+        # Compute robust spacing thresholds from observed glyph widths.
+        # PDFs with letter-tracking (e.g. "근 무 기 간") often need a lower
+        # threshold than normal prose text.
         widths = []
         for ch, _ in all_chars:
             cb = ch.get("bbox")
@@ -1846,25 +1920,55 @@ class PDFViewWidget(QWidget):
                 w = cb[2] - cb[0]
                 if w > 0:
                     widths.append(w)
-        avg_char_w = (sum(widths) / len(widths)) if widths else 5.0
-        space_threshold = avg_char_w * 0.35
+        if widths:
+            widths_sorted = sorted(widths)
+            median_w = widths_sorted[len(widths_sorted) // 2]
+        else:
+            median_w = 5.0
+        base_space_threshold = max(0.8, median_w * 0.20)
 
         parts = []
         prev_x1 = None
+        prev_w = None
+        char_count = 0
+        wide_gap_pairs = 0
+        pair_count = 0
+
         for ch, _fs in all_chars:
             c = ch.get("c", "")
             cb = ch.get("bbox")
             if not cb or not c:
                 continue
+
+            cw = max(cb[2] - cb[0], 0.0)
             x0 = cb[0]
             if prev_x1 is not None:
                 gap = x0 - prev_x1
-                if gap > space_threshold:
+                local_threshold = base_space_threshold
+                if prev_w is not None and cw > 0:
+                    local_threshold = max(local_threshold, min(prev_w, cw) * 0.18)
+                if gap > local_threshold:
                     parts.append(" ")
+                if gap > max(1.2, (prev_w or median_w) * 0.22):
+                    wide_gap_pairs += 1
+                pair_count += 1
+
             parts.append(c)
             prev_x1 = cb[2]
+            prev_w = cw
+            char_count += 1
 
-        return "".join(parts).strip()
+        text = "".join(parts).strip()
+
+        # Fallback for uniformly tracked labels where bbox gap detection can be
+        # inconsistent: keep visible inter-character spacing for short lines.
+        if " " not in text and char_count >= 4 and pair_count >= 3:
+            if (wide_gap_pairs / max(pair_count, 1)) >= 0.70:
+                compact = "".join(ch.get("c", "") for ch, _ in all_chars if ch.get("c", ""))
+                if compact:
+                    text = " ".join(compact).strip()
+
+        return text
 
     def _handle_text_edit_hover(self, pos: QPointF):
         """Update hover highlight for text edit mode."""
@@ -1884,7 +1988,9 @@ class PDFViewWidget(QWidget):
         lines = self._get_text_lines_for_page(page_index)
 
         found = None
-        for line_info in lines:
+        # Reverse iteration prefers later stream entries when overlapped text
+        # lines exist at the same visual location.
+        for line_info in reversed(lines):
             if line_info["bbox"].contains(fitz.Point(page_pos.x(), page_pos.y())):
                 found = line_info
                 break
@@ -1911,7 +2017,9 @@ class PDFViewWidget(QWidget):
         page_pos = self._screen_to_page_coords(pos, page_index)
         lines = self._get_text_lines_for_page(page_index)
 
-        for line_info in lines:
+        # Reverse iteration prefers the most recently written line if
+        # multiple candidates overlap.
+        for line_info in reversed(lines):
             if line_info["bbox"].contains(fitz.Point(page_pos.x(), page_pos.y())):
                 self._begin_text_edit(line_info, page_index)
                 return
@@ -2058,13 +2166,27 @@ class PDFViewWidget(QWidget):
 
             # ── 폰트 결정 ────────────────────────────────────────
             font_kwargs = self._extract_embedded_font(
-                page, line_info["font"], 
-                is_bold=is_bold, is_italic=is_italic, is_serif=is_serif
+                page,
+                line_info["font"],
+                new_text,
+                is_bold=is_bold,
+                is_italic=is_italic,
+                is_serif=is_serif,
+                source_text=old_text,
+                target_width=bbox.width,
+                font_size=font_size,
             )
             if font_kwargs is None:
                 font_kwargs = self._map_to_fitz_font(
-                    line_info["font"], new_text, 
-                    is_bold=is_bold, is_italic=is_italic, is_serif=is_serif
+                    line_info["font"],
+                    new_text,
+                    is_bold=is_bold,
+                    is_italic=is_italic,
+                    is_serif=is_serif,
+                    infer_from_name=False,
+                    reference_text=old_text,
+                    target_width=bbox.width,
+                    target_font_size=font_size,
                 )
             _log.info(f"font={line_info['font']!r} flags={flags} kwargs={font_kwargs}")
 
@@ -2082,15 +2204,49 @@ class PDFViewWidget(QWidget):
             first_char_x = line_info.get("first_char_x")
             insert_x = first_char_x if first_char_x is not None else origin[0]
             insert_point = fitz.Point(insert_x, origin[1])
-            rc = page.insert_text(
-                insert_point,
-                new_text,
-                fontsize=font_size,
-                color=(r, g, b),
-                render_mode=0,
-                **font_kwargs,
+
+            # If edited text contains glyphs not present in the embedded subset,
+            # keep original embedded font for supported chars and fall back only
+            # for missing glyphs.
+            primary_font_kwargs = self._extract_embedded_font(
+                page,
+                line_info["font"],
+                old_text,
+                is_bold=is_bold,
+                is_italic=is_italic,
+                is_serif=is_serif,
+                source_text=old_text,
+                target_width=bbox.width,
+                font_size=font_size,
+                allow_partial_embedded=True,
             )
-            _log.info(f"insert_text OK  rc={rc}  point={insert_point}")
+            mixed_ok = False
+            if (
+                primary_font_kwargs
+                and str(primary_font_kwargs.get("fontname", "")).startswith("pdfpro_emb_")
+                and str(primary_font_kwargs.get("fontname", "")) != str(font_kwargs.get("fontname", ""))
+            ):
+                mixed_ok = self._insert_text_with_glyph_fallback(
+                    page=page,
+                    insert_point=insert_point,
+                    text=new_text,
+                    source_text=old_text,
+                    fontsize=font_size,
+                    color=(r, g, b),
+                    primary_font_kwargs=primary_font_kwargs,
+                    fallback_font_kwargs=font_kwargs,
+                )
+
+            if not mixed_ok:
+                rc = page.insert_text(
+                    insert_point,
+                    new_text,
+                    fontsize=font_size,
+                    color=(r, g, b),
+                    render_mode=0,
+                    **font_kwargs,
+                )
+                _log.info(f"insert_text OK  rc={rc}  point={insert_point}")
             edit_ok = True
         except Exception as e:
             import traceback
@@ -2110,6 +2266,147 @@ class PDFViewWidget(QWidget):
         self.doc_modified.emit()
         self.update()
 
+    @staticmethod
+    def _insert_text_with_glyph_fallback(
+        page: fitz.Page,
+        insert_point: fitz.Point,
+        text: str,
+        source_text: str = "",
+        fontsize: float = 12.0,
+        color: tuple[float, float, float] = (0.0, 0.0, 0.0),
+        primary_font_kwargs: dict | None = None,
+        fallback_font_kwargs: dict | None = None,
+    ) -> bool:
+        """Insert text with per-char glyph fallback.
+
+        Characters supported by the original embedded subset keep the original
+        glyph style; only unsupported chars are drawn with fallback font.
+        """
+        if not text:
+            return False
+
+        def _build_font(kwargs: dict):
+            try:
+                ff = kwargs.get("fontfile") if isinstance(kwargs, dict) else None
+                fn = kwargs.get("fontname") if isinstance(kwargs, dict) else None
+                if ff:
+                    return fitz.Font(fontfile=ff)
+                if fn:
+                    return fitz.Font(fontname=fn)
+            except Exception:
+                return None
+            return None
+
+        def _has_glyph(font_obj, ch: str) -> bool:
+            if not ch:
+                return True
+            has = getattr(font_obj, "has_glyph", None)
+            if not callable(has):
+                return True
+            try:
+                gid = has(ord(ch))
+            except TypeError:
+                try:
+                    gid = has(ch)
+                except Exception:
+                    return False
+            except Exception:
+                return False
+            return bool(gid)
+
+        def _run_width(run: str, font_obj, kwargs: dict) -> float:
+            if not run:
+                return 0.0
+            try:
+                return float(font_obj.text_length(run, fontsize=fontsize))
+            except Exception:
+                pass
+            try:
+                return float(fitz.get_text_length(run, fontname=str(kwargs.get("fontname", "helv")), fontsize=fontsize))
+            except Exception:
+                return float(max(len(run), 1) * max(float(fontsize), 1.0) * 0.6)
+
+        primary_obj = _build_font(primary_font_kwargs or {})
+        fallback_obj = _build_font(fallback_font_kwargs or {})
+        if primary_obj is None or fallback_obj is None:
+            return False
+
+        runs: list[tuple[str, str]] = []  # (kind, text)
+        cur_kind = None
+        cur_chars: list[str] = []
+        fallback_used = False
+
+        # Keep unchanged characters on the original embedded font whenever possible,
+        # and force changed characters to fallback font. This avoids drawing new
+        # glyphs as tofu in subset fonts.
+        keep_primary = [True] * len(text)
+        if source_text:
+            try:
+                import difflib
+                keep_primary = [False] * len(text)
+                sm = difflib.SequenceMatcher(a=source_text, b=text)
+                for a0, b0, size in sm.get_matching_blocks():
+                    if size <= 0:
+                        continue
+                    for i in range(b0, min(b0 + size, len(text))):
+                        keep_primary[i] = True
+            except Exception:
+                # Fallback: if diff fails, default to glyph availability only.
+                keep_primary = [True] * len(text)
+
+        for idx, ch in enumerate(text):
+            unchanged = keep_primary[idx] if idx < len(keep_primary) else False
+            use_primary = unchanged and _has_glyph(primary_obj, ch)
+            kind = "primary" if use_primary else "fallback"
+            if kind == "fallback" and not ch.isspace():
+                fallback_used = True
+
+            if cur_kind is None:
+                cur_kind = kind
+                cur_chars = [ch]
+                continue
+
+            if kind == cur_kind:
+                cur_chars.append(ch)
+            else:
+                runs.append((cur_kind, "".join(cur_chars)))
+                cur_kind = kind
+                cur_chars = [ch]
+
+        if cur_kind is not None and cur_chars:
+            runs.append((cur_kind, "".join(cur_chars)))
+        if not runs:
+            return False
+
+        try:
+            x = float(getattr(insert_point, "x", insert_point[0]))
+            y = float(getattr(insert_point, "y", insert_point[1]))
+        except Exception:
+            x = float(insert_point[0])
+            y = float(insert_point[1])
+
+        for kind, run in runs:
+            if not run:
+                continue
+            if kind == "primary":
+                kwargs = primary_font_kwargs
+                font_obj = primary_obj
+            else:
+                kwargs = fallback_font_kwargs
+                font_obj = fallback_obj
+
+            page.insert_text(
+                fitz.Point(x, y),
+                run,
+                fontsize=fontsize,
+                color=color,
+                render_mode=0,
+                **kwargs,
+            )
+            x += _run_width(run, font_obj, kwargs)
+
+        _log.info(f"insert_text mixed OK  point={insert_point}  fallback_used={fallback_used}")
+        return True
     @staticmethod
     def _sample_background_color(page: fitz.Page, bbox: fitz.Rect) -> tuple[float, float, float]:
         """bbox 중심 픽셀을 렌더링해서 배경색(RGB 0.0~1.0)을 감지한다.
@@ -2134,7 +2431,7 @@ class PDFViewWidget(QWidget):
         return (1.0, 1.0, 1.0)
 
     @staticmethod
-    def _map_to_fitz_font(original_font: str, text: str, is_bold: bool = False, is_italic: bool = False, is_serif: bool = False) -> dict:
+    def _map_to_fitz_font(original_font: str, text: str, is_bold: bool = False, is_italic: bool = False, is_serif: bool = False, infer_from_name: bool = True, reference_text: str = "", target_width: float | None = None, target_font_size: float | None = None) -> dict:
         """Map a PDF font name to PyMuPDF font parameters.
 
         Returns a dict with 'fontname' and optionally 'fontfile' keys,
@@ -2172,15 +2469,83 @@ class PDFViewWidget(QWidget):
             windir = os.environ.get("WINDIR", "C:\\Windows")
             fonts_dir = os.path.join(windir, "Fonts")
             lower = original_font.lower().replace("-", "").replace(" ", "").replace("_", "")
-            is_bold = is_bold or "bold" in lower or "heavy" in lower or "black" in lower
-            is_light = "light" in lower or "thin" in lower or "semilight" in lower
+            font_name_trustworthy = PDFViewWidget._is_plausible_font_family(original_font)
+            if infer_from_name:
+                is_bold = is_bold or "bold" in lower or "heavy" in lower or "black" in lower
+                is_light = "light" in lower or "thin" in lower or "semilight" in lower
+            else:
+                # Text-edit mode: avoid accidental bold inference,
+                # but preserve explicit light-style names like "Semilight".
+                is_light = font_name_trustworthy and ("light" in lower or "thin" in lower or "semilight" in lower)
+
+            def _pick_best_cjk_fallback() -> Optional[dict]:
+                # When font family name is broken, choose the closest system font
+                # by matching rendered width against the original line width.
+                if not reference_text or not target_width or not target_font_size:
+                    return None
+                if target_width <= 0 or target_font_size <= 0:
+                    return None
+
+                candidate_files = [
+                    ("malgun", "malgun.ttf", "sans"),
+                    ("malgunbd", "malgunbd.ttf", "sans"),
+                    ("malgunsl", "malgunsl.ttf", "sans"),
+                    ("gulim", "gulim.ttc", "sans"),
+                    ("batang", "batang.ttc", "serif"),
+                ]
+
+                best = None  # (score, fontname, path, measured_width)
+                for cand_name, cand_file, cand_kind in candidate_files:
+                    cand_path = os.path.join(fonts_dir, cand_file)
+                    if not os.path.exists(cand_path):
+                        continue
+                    try:
+                        fobj = fitz.Font(fontfile=cand_path)
+                        measured = fobj.text_length(reference_text, fontsize=target_font_size)
+                    except Exception:
+                        try:
+                            measured = fitz.get_text_length(reference_text, fontname=cand_name, fontsize=target_font_size)
+                        except Exception:
+                            continue
+
+                    score = abs(measured - target_width)
+                    # Gentle style preference penalty.
+                    if is_serif and cand_kind == "sans":
+                        score += target_width * 0.02
+                    elif (not is_serif) and cand_kind == "serif":
+                        score += target_width * 0.02
+                    if is_bold and cand_name not in ("malgunbd",):
+                        score += target_width * 0.01
+                    if (not is_bold) and cand_name in ("malgunbd",):
+                        score += target_width * 0.01
+
+                    # Avoid over-selecting semilight when the source is not
+                    # explicitly a light style. Width-only matching can make
+                    # very thin fonts win too often.
+                    if (not is_light) and cand_name == "malgunsl":
+                        score += target_width * 0.06
+                    elif is_light and cand_name != "malgunsl":
+                        score += target_width * 0.03
+
+                    if best is None or score < best[0]:
+                        best = (score, cand_name, cand_path, measured)
+
+                if best is not None:
+                    _log.info(
+                        f"cjk width-match fallback selected: font={best[1]} "
+                        f"measured={best[3]:.2f} target={target_width:.2f}"
+                    )
+                    return {"fontname": best[1], "fontfile": best[2]}
+                return None
             
             # CJK PDF font flags are often inaccurate (e.g. serif flag set on sans-serif).
-            # Ignore the PDF serif flag if the font name has no explicit serif keywords.
+            # Only apply name-based serif correction when infer_from_name=True.
+            # In text-edit mode we pass infer_from_name=False, so keep span flags as-is.
             is_explicit_serif = "batang" in lower or "gungsuh" in lower or "myeongjo" in lower or "serif" in lower
-            if is_serif and not is_explicit_serif:
-                is_serif = False
-            is_serif = is_serif or is_explicit_serif
+            if infer_from_name:
+                if is_serif and not is_explicit_serif:
+                    is_serif = False
+                is_serif = is_serif or is_explicit_serif
 
             # Map original font family to system font files
             font_map = [
@@ -2209,6 +2574,12 @@ class PDFViewWidget(QWidget):
                 path = os.path.join(fonts_dir, matched)
                 if os.path.exists(path):
                     return {"fontname": matched.split(".")[0], "fontfile": path}
+
+            # Unknown / broken family name: pick the closest CJK system font by
+            # width if we have line metrics from text-edit mode.
+            width_match = _pick_best_cjk_fallback() if not infer_from_name else None
+            if width_match:
+                return width_match
 
             # Default fallback for CJK
             if is_serif:
@@ -2246,9 +2617,10 @@ class PDFViewWidget(QWidget):
         # Latin font mapping — use system font files for accurate rendering
         import os as _os
         lower = original_font.lower().replace("-", "").replace(" ", "").replace("_", "")
-        is_bold = is_bold or "bold" in lower or "heavy" in lower or "black" in lower
-        is_italic = is_italic or "italic" in lower or "oblique" in lower
-        is_serif = is_serif or "serif" in lower or "times" in lower or "georgia" in lower or "garamond" in lower
+        if infer_from_name:
+            is_bold = is_bold or "bold" in lower or "heavy" in lower or "black" in lower
+            is_italic = is_italic or "italic" in lower or "oblique" in lower
+            is_serif = is_serif or "serif" in lower or "times" in lower or "georgia" in lower or "garamond" in lower
 
         windir = _os.environ.get("WINDIR", "C:\\Windows")
         fonts_dir = _os.path.join(windir, "Fonts")
@@ -2307,7 +2679,94 @@ class PDFViewWidget(QWidget):
 
     # ── Embedded Font Extraction ─────────────
 
-    _embedded_font_cache: dict = {}  # xref -> temp file path
+    _embedded_font_cache: dict = {}  # (xref, sha1) -> temp file path
+
+    @staticmethod
+    def _is_plausible_font_family(name: Optional[str]) -> bool:
+        """Reject mojibake-like names (e.g. 'ËÀ´') that break font mapping."""
+        if not name:
+            return False
+        s = str(name).strip()
+        if len(s) < 2:
+            return False
+        if any(ord(c) < 32 for c in s):
+            return False
+        has_ascii = any(("A" <= c <= "Z") or ("a" <= c <= "z") for c in s)
+        has_cjk = any(ord(c) > 0x2E7F for c in s)
+        return has_ascii or has_cjk
+
+    @staticmethod
+    def _normalize_pdf_font_tag(name: Optional[str]) -> str:
+        """Normalize PDF font tag for fuzzy matching.
+
+        Examples:
+        - "DEVEXP+MalgunGothic,Bold" -> "malgungothic"
+        - "/F1" -> "f1"
+        """
+        if not name:
+            return ""
+        s = str(name).strip().lstrip("/")
+        if "+" in s:
+            prefix, suffix = s.split("+", 1)
+            if 1 <= len(prefix) <= 8 and prefix.isascii() and prefix.isalpha():
+                s = suffix
+        if "," in s:
+            s = s.split(",", 1)[0]
+        return s.lower().replace("-", "").replace("_", "").replace(" ", "")
+    @classmethod
+    def _cache_embedded_font_file(cls, xref: int, ext: str, content: bytes) -> Optional[str]:
+        """Persist an embedded font stream to temp and reuse by content hash."""
+        if not content:
+            return None
+        digest = hashlib.sha1(content).hexdigest()[:12]
+        cache_key = (int(xref), digest)
+        cached = cls._embedded_font_cache.get(cache_key)
+        if cached and os.path.exists(cached):
+            return cached
+
+        safe_ext = (ext or "").lower().lstrip(".")
+        if safe_ext not in {"ttf", "otf", "ttc", "cff", "pfb"}:
+            safe_ext = "bin"
+        font_path = os.path.join(tempfile.gettempdir(), f"pdfpro_font_{xref}_{digest}.{safe_ext}")
+        try:
+            if not os.path.exists(font_path):
+                with open(font_path, "wb") as f:
+                    f.write(content)
+            cls._embedded_font_cache[cache_key] = font_path
+            return font_path
+        except Exception as e:
+            _log.info(f"embedded font cache write failed xref={xref}: {e}")
+            return None
+
+    @staticmethod
+    def _embedded_font_supports_text(font_path: str, text: str) -> bool:
+        """Return True if the embedded font likely contains glyphs for all chars."""
+        if not text:
+            return True
+        try:
+            font = fitz.Font(fontfile=font_path)
+        except Exception:
+            return False
+
+        has_glyph = getattr(font, "has_glyph", None)
+        if not callable(has_glyph):
+            # Older/newer PyMuPDF variants may not expose has_glyph.
+            # In that case, try to preserve visual fidelity and trust the font.
+            return True
+
+        for ch in text:
+            try:
+                gid = has_glyph(ord(ch))
+            except TypeError:
+                try:
+                    gid = has_glyph(ch)
+                except Exception:
+                    return False
+            except Exception:
+                return False
+            if not gid:
+                return False
+        return True
 
     @staticmethod
     def _read_font_family_from_binary(content: bytes) -> Optional[str]:
@@ -2317,9 +2776,15 @@ class PDFViewWidget(QWidget):
             data = content
             # TTC (font collection) → 첫 번째 폰트의 오프셋으로 이동
             if data[:4] == b'ttcf':
+                if len(data) < 16:
+                    return None
                 offset = struct.unpack('>I', data[12:16])[0]
+                if offset <= 0 or offset >= len(data):
+                    return None
                 data = data[offset:]
 
+            if len(data) < 12:
+                return None
             num_tables = struct.unpack('>H', data[4:6])[0]
             name_offset = name_length = None
             for i in range(min(num_tables, 100)):
@@ -2332,49 +2797,107 @@ class PDFViewWidget(QWidget):
                     name_length = struct.unpack('>I', data[entry + 12:entry + 16])[0]
                     break
 
-            if name_offset is None or name_offset + name_length > len(content):
+            if name_offset is None or name_length is None:
+                return None
+            if name_offset < 0 or name_offset + name_length > len(data):
                 return None
 
-            nt = content[name_offset:name_offset + name_length]
+            nt = data[name_offset:name_offset + name_length]
             if len(nt) < 6:
                 return None
             count = struct.unpack('>H', nt[2:4])[0]
             str_offset = struct.unpack('>H', nt[4:6])[0]
+            if str_offset >= len(nt):
+                return None
 
-            # nameID=1 (Font Family) 레코드를 찾는다
+            candidates: list[tuple[int, str]] = []
             for i in range(min(count, 200)):
                 rec = 6 + i * 12
                 if rec + 12 > len(nt):
                     break
                 pid = struct.unpack('>H', nt[rec:rec + 2])[0]
+                eid = struct.unpack('>H', nt[rec + 2:rec + 4])[0]
+                lid = struct.unpack('>H', nt[rec + 4:rec + 6])[0]
                 name_id = struct.unpack('>H', nt[rec + 6:rec + 8])[0]
                 slen = struct.unpack('>H', nt[rec + 8:rec + 10])[0]
                 soff = struct.unpack('>H', nt[rec + 10:rec + 12])[0]
 
-                if name_id != 1:
+                # Prefer typographic family(16) / family(1), then full name(4), PS name(6)
+                if name_id not in (16, 1, 4, 6):
                     continue
 
-                s = nt[str_offset + soff:str_offset + soff + slen]
-                if pid == 3:  # Windows (UTF-16BE)
+                s0 = str_offset + soff
+                s1 = s0 + slen
+                if s0 < 0 or s1 > len(nt) or s0 >= s1:
+                    continue
+                s = nt[s0:s1]
+
+                decoded = None
+                if pid in (0, 3):  # Unicode / Windows
                     try:
-                        return s.decode('utf-16-be').strip()
+                        decoded = s.decode('utf-16-be').replace("\x00", "").strip()
                     except Exception:
-                        pass
-                elif pid == 1:  # Mac (mac-roman)
+                        decoded = None
+                elif pid == 1:  # Mac Roman
                     try:
-                        return s.decode('mac-roman').strip()
+                        decoded = s.decode('mac-roman').replace("\x00", "").strip()
                     except Exception:
-                        pass
+                        decoded = None
+
+                if not decoded:
+                    continue
+
+                # Remove subset prefix like "ABCDEF+"
+                if "+" in decoded:
+                    prefix, suffix = decoded.split("+", 1)
+                    if 1 <= len(prefix) <= 8 and prefix.isascii() and prefix.isalpha():
+                        decoded = suffix
+                decoded = decoded.strip()
+                if not decoded:
+                    continue
+
+                score = 0
+                if name_id == 16:
+                    score += 120
+                elif name_id == 1:
+                    score += 100
+                elif name_id == 4:
+                    score += 70
+                else:  # name_id == 6
+                    score += 50
+
+                if pid == 3:
+                    score += 30
+                elif pid == 0:
+                    score += 20
+                elif pid == 1:
+                    score += 10
+
+                if lid == 0x0412:  # ko-KR
+                    score += 8
+                if eid in (1, 10):  # Unicode BMP / full Unicode
+                    score += 5
+                if PDFViewWidget._is_plausible_font_family(decoded):
+                    score += 20
+
+                candidates.append((score, decoded))
+
+            if not candidates:
+                return None
+            candidates.sort(key=lambda x: x[0], reverse=True)
+            best = candidates[0][1]
+            if PDFViewWidget._is_plausible_font_family(best):
+                return best
             return None
         except Exception:
             return None
 
-    def _extract_embedded_font(self, page: fitz.Page, font_name: str, is_bold: bool = False, is_italic: bool = False, is_serif: bool = False) -> Optional[dict]:
-        """PDF 폰트의 실제 이름을 알아내어 시스템 폰트를 매칭한다.
+    def _extract_embedded_font(self, page: fitz.Page, font_name: str, text: str = "", is_bold: bool = False, is_italic: bool = False, is_serif: bool = False, source_text: str = "", target_width: float | None = None, font_size: float | None = None, allow_partial_embedded: bool = False) -> Optional[dict]:
+        """Try embedded font first, then map real family to system font.
 
-        서브셋 폰트 바이너리는 글리프가 부족하므로 직접 사용하지 않고,
-        폰트 바이너리의 name 테이블에서 실제 패밀리 이름을 읽어서
-        시스템에 설치된 전체 폰트 파일을 사용한다.
+        1) If embedded font contains all glyphs for edited text, reuse it directly
+           (best visual fidelity).
+        2) Otherwise resolve real family from binary and map to system font file.
         """
         if not self._doc:
             return None
@@ -2384,8 +2907,40 @@ class PDFViewWidget(QWidget):
         except Exception:
             return None
 
-        # 폰트 이름이 깨졌는지 확인 (비ASCII 제어 문자 포함)
-        font_name_corrupted = any(ord(c) < 32 for c in font_name)
+        font_name = str(font_name or "")
+        font_name_norm = self._normalize_pdf_font_tag(font_name)
+
+        # Treat mojibake-like names as corrupted too (not only control chars).
+        font_name_corrupted = (
+            any(ord(c) < 32 for c in font_name)
+            or not self._is_plausible_font_family(font_name)
+        )
+
+        def _is_name_match(fname_val: str, sname_val: str) -> bool:
+            if font_name and font_name in (fname_val, sname_val):
+                return True
+            if not font_name_norm:
+                return False
+            fn = self._normalize_pdf_font_tag(fname_val)
+            sn = self._normalize_pdf_font_tag(sname_val)
+            if font_name_norm in (fn, sn):
+                return True
+            if fn and (font_name_norm in fn or fn in font_name_norm):
+                return True
+            if sn and (font_name_norm in sn or sn in font_name_norm):
+                return True
+            return False
+
+        # If source font name is corrupted but still has a usable normalized token,
+        # process likely matching font entries first, then broad fallback entries.
+        if font_name_corrupted and font_name_norm:
+            try:
+                fonts = sorted(
+                    fonts,
+                    key=lambda fi: 0 if (len(fi) >= 5 and _is_name_match(fi[3], fi[4])) else 1,
+                )
+            except Exception:
+                pass
 
         for font_info in fonts:
             if len(font_info) < 5:
@@ -2394,10 +2949,11 @@ class PDFViewWidget(QWidget):
             fname = font_info[3]
             sname = font_info[4]
 
-            # 정상 폰트 이름일 때: 매칭되는 것만 처리
-            if not font_name_corrupted:
-                if font_name not in (fname, sname):
-                    continue
+            name_match = _is_name_match(fname, sname)
+
+            # For clean font names, only process matching entries.
+            if not font_name_corrupted and not name_match:
+                continue
 
             # 폰트 바이너리에서 실제 패밀리 이름 추출
             try:
@@ -2405,35 +2961,66 @@ class PDFViewWidget(QWidget):
             except Exception:
                 continue
 
+            embedded_kwargs = None
+            if content and len(content) > 100:
+                embedded_path = self._cache_embedded_font_file(xref, ext, content)
+                if embedded_path:
+                    if self._embedded_font_supports_text(embedded_path, text):
+                        embedded_kwargs = {"fontname": f"pdfpro_emb_{xref}", "fontfile": embedded_path}
+                    else:
+                        _log.info(f"embedded font lacks glyphs for edited text xref={xref}")
+                        if allow_partial_embedded:
+                            embedded_kwargs = {"fontname": f"pdfpro_emb_{xref}", "fontfile": embedded_path}
+                            _log.info(f"using embedded font with partial glyph coverage xref={xref}")
+
             real_family = None
             if content and len(content) > 100:
                 real_family = self._read_font_family_from_binary(content)
 
             # basename에서도 시도 (서브셋 접두사 제거)
-            if not real_family:
+            if not self._is_plausible_font_family(real_family):
                 raw = basename if basename else fname
                 if "+" in raw:
                     raw = raw.split("+")[-1]
-                if raw and len(raw) > 1:
+                raw = raw.strip() if raw else ""
+                if self._is_plausible_font_family(raw):
                     real_family = raw
+                else:
+                    real_family = None
 
             _log.info(f"extract_font xref={xref}: basename={basename!r} "
                        f"fname={fname!r} sname={sname!r} "
+                       f"name_match={name_match} "
                        f"real_family={real_family!r} "
                        f"content_len={len(content) if content else 0}")
 
+            if embedded_kwargs is not None:
+                _log.info(f"using embedded font directly: {embedded_kwargs}")
+                return embedded_kwargs
+
             if real_family:
                 # 실제 폰트 이름으로 시스템 폰트 매칭 (전체 글리프 포함)
-                result = self._map_to_fitz_font(real_family, "가", is_bold=is_bold, is_italic=is_italic, is_serif=is_serif)
+                sample_text = text if text else "가"
+                result = self._map_to_fitz_font(
+                    real_family,
+                    sample_text,
+                    is_bold=is_bold,
+                    is_italic=is_italic,
+                    is_serif=is_serif,
+                    infer_from_name=False,
+                    reference_text=source_text or sample_text,
+                    target_width=target_width,
+                    target_font_size=font_size,
+                )
                 if result:
                     _log.info(f"matched system font: {result}")
                     return result
 
+            # When corrupted name is used, keep scanning other candidate fonts.
             if font_name_corrupted:
-                continue  # 다음 font entry 시도
+                continue
 
         return None
-
     # ── Stamp Placement ───────────────────────
 
     def place_stamp_on_page(self, page_index: int, image_path: str, screen_pos: Optional[QPointF] = None):
@@ -2547,7 +3134,9 @@ class PDFViewWidget(QWidget):
         font_name = config.get("font_name", "Arial")
         font_size = float(config.get("font_size", 14))
         color = config.get("color", (0, 0, 0))
-        font_kwargs = _resolve_freetext_font(text, font_name)
+        is_bold = bool(config.get("bold", False))
+        is_italic = bool(config.get("italic", False))
+        font_kwargs = _resolve_freetext_font(text, font_name, is_bold=is_bold, is_italic=is_italic)
         rect = fitz.Rect(annot.rect)
         page.delete_annot(annot)
         new_annot = page.add_freetext_annot(
@@ -2646,6 +3235,7 @@ class PDFScrollView(QScrollArea):
         self.setAlignment(Qt.AlignmentFlag.AlignHCenter)
 
         self._pdf_widget = PDFViewWidget()
+        self._pdf_widget.setObjectName("pdfCanvas")
         self.setWidget(self._pdf_widget)
 
         self._pdf_widget.page_changed.connect(self.page_changed)
@@ -2724,3 +3314,5 @@ class PDFScrollView(QScrollArea):
             if path.lower().endswith(".pdf"):
                 self.parent().window().load_file(path)
                 break
+
+

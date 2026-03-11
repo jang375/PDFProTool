@@ -124,17 +124,17 @@ TOOL_BUTTON_STYLE = (
 )
 
 TOPBAR_BUTTON_STYLE = (
-    "QPushButton { padding: 6px 11px; font-size: 12px; font-weight: 500; color: #2f3745; "
-    "border: 1px solid transparent; background: transparent; border-radius: 7px; margin: 0px; }"
-    "QPushButton:hover { background: #edf2ff; border: 1px solid #d6e2ff; color: #1f3a6d; }"
-    "QPushButton:pressed { background: #dde7fb; border: 1px solid #bfd3fa; }"
+    "QPushButton { padding: 6px 11px; font-size: 12px; font-weight: 500; color: #1F2937; "
+    "border: 1px solid transparent; background: transparent; border-radius: 8px; margin: 0px; }"
+    "QPushButton:hover { background: #EFF4FF; border: 1px solid #D6E4FF; color: #1D4ED8; }"
+    "QPushButton:pressed { background: #E5EEFF; border: 1px solid #C7DAFF; }"
 )
 
 TOPBAR_BUTTON_ACTIVE_STYLE = (
-    "QPushButton { padding: 6px 11px; font-size: 12px; font-weight: 600; color: #0f4ac4; "
-    "border: 1px solid #b6cdf8; background: #e6efff; border-radius: 7px; margin: 0px; }"
-    "QPushButton:hover { background: #dce9ff; border: 1px solid #99baf5; }"
-    "QPushButton:pressed { background: #cfe0ff; border: 1px solid #87abef; }"
+    "QPushButton { padding: 6px 11px; font-size: 12px; font-weight: 600; color: #1D4ED8; "
+    "border: 1px solid #BFDBFE; background: #EBF3FF; border-radius: 8px; margin: 0px; }"
+    "QPushButton:hover { background: #E3EEFF; border: 1px solid #93C5FD; }"
+    "QPushButton:pressed { background: #DCE9FF; border: 1px solid #7FB2F6; }"
 )
 
 DIVIDER_STYLE = "background: #d7dee8; min-width: 1px; max-width: 1px; margin: 4px 5px;"
@@ -157,15 +157,15 @@ def make_tool_button(text: str, tooltip: str, icon_name: str = "") -> QToolButto
     else:
         btn.setText(text)
     btn.setToolTip(tooltip)
-    btn.setFixedSize(36, 32)
-    btn.setStyleSheet(TOOL_BUTTON_STYLE)
+    btn.setObjectName("iconToolButton")
+    btn.setFixedSize(34, 32)
     return btn
 
 
 def make_divider() -> QFrame:
     d = QFrame()
+    d.setObjectName("toolDivider")
     d.setFrameShape(QFrame.Shape.VLine)
-    d.setStyleSheet(DIVIDER_STYLE)
     return d
 
 
@@ -331,6 +331,7 @@ class MainWindow(QMainWindow):
 
     def __init__(self):
         super().__init__()
+        self.setObjectName("mainWindowShell")
         self.setWindowTitle(f"PDF Pro Tool v{__version__}")
         self.setMinimumSize(1100, 750)
         self.resize(1280, 860)
@@ -394,44 +395,21 @@ class MainWindow(QMainWindow):
         right_vl = QVBoxLayout(right_container)
         right_vl.setContentsMargins(0, 0, 0, 0)
         right_vl.setSpacing(0)
-        
+
         # ── Top Bar Row 1: Tabs ──
         self._top_tab_widget = QWidget()
+        self._top_tab_widget.setObjectName("topTabShell")
         self._top_tab_widget.setFixedHeight(35)
-        self._top_tab_widget.setStyleSheet(TOP_TAB_ROW_STYLE)
         tab_layout = QHBoxLayout(self._top_tab_widget)
         tab_layout.setContentsMargins(10, 0, 10, 0)
-        tab_layout.setSpacing(5)
+        tab_layout.setSpacing(6)
 
         # Tabs
         self._tab_bar = QTabBar()
         self._tab_bar.setMovable(False)
         self._tab_bar.setTabsClosable(True)
         self._tab_bar.setDocumentMode(True)
-        self._tab_bar.setStyleSheet("""
-            QTabBar::tab {
-                padding: 6px 15px;
-                background: transparent;
-                border: none;
-                color: #556074;
-                font-size: 13px;
-                margin-top: 4px;
-            }
-            QTabBar::tab:selected {
-                background: #ffffff;
-                border-top: 2px solid #1f67e6;
-                border-bottom: 2px solid #ffffff;
-                color: #1f2d45;
-                font-weight: 600;
-                border-top-left-radius: 5px;
-                border-top-right-radius: 5px;
-            }
-            QTabBar::tab:hover:!selected {
-                background: #eef3fb;
-                border-radius: 5px;
-                color: #384a66;
-            }
-        """)
+        self._tab_bar.setObjectName("topTabBar")
         self._tab_bar.tabCloseRequested.connect(self._close_tab)
         self._tab_bar.addTab("새 문서")
         tab_layout.addWidget(self._tab_bar)
@@ -439,12 +417,7 @@ class MainWindow(QMainWindow):
         add_tab_btn = QToolButton()
         add_tab_btn.setText("+ 만들기")
         add_tab_btn.setToolTip("새 탭 추가")
-        add_tab_btn.setStyleSheet(
-            "QToolButton { border: 1px solid #d3dceb; border-radius: 6px; padding: 2px 9px; "
-            "font-size: 11px; background: #fff; color: #2f3745; margin-left: 5px; margin-top: 5px; margin-bottom: 3px; }"
-            "QToolButton:hover { background: #f2f6fd; border-color: #b8c8e6; }"
-            "QToolButton:pressed { background: #e5edf9; }"
-        )
+        add_tab_btn.setObjectName("addTabButton")
         add_tab_btn.clicked.connect(self._add_new_tab)
         tab_layout.addWidget(add_tab_btn)
         tab_layout.addStretch()
@@ -453,11 +426,11 @@ class MainWindow(QMainWindow):
 
         # ── Top Bar Row 2: Tools & Controls ──
         self._top_tools_widget = QWidget()
+        self._top_tools_widget.setObjectName("topToolbarShell")
         self._top_tools_widget.setFixedHeight(45)
-        self._top_tools_widget.setStyleSheet(TOP_TOOLS_ROW_STYLE)
         tb_layout = QHBoxLayout(self._top_tools_widget)
         tb_layout.setContentsMargins(10, 0, 10, 0)
-        tb_layout.setSpacing(5)
+        tb_layout.setSpacing(8)
 
         tb_layout.addStretch()
         
@@ -469,17 +442,19 @@ class MainWindow(QMainWindow):
         save_btn = make_tool_button("💾", "저장 (Ctrl+S)", "save")
         save_btn.clicked.connect(self._save_file)
         tb_layout.addWidget(save_btn)
-
         tb_layout.addWidget(make_divider())
+        tb_layout.addSpacing(8)
 
         # ── Tools ──
-        
+
         def make_topbar_btn(text, icon_name, callback=None):
             from PyQt6.QtGui import QCursor
             btn = QPushButton(f"  {text}")
             btn.setIcon(svg_icon(icon_name, 16))
             btn.setIconSize(QSize(16, 16))
             btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+            btn.setMinimumHeight(32)
+            btn.setObjectName("topToolbarActionButton")
             btn.setStyleSheet(TOPBAR_BUTTON_STYLE)
             if callback:
                 btn.clicked.connect(callback)
@@ -495,51 +470,56 @@ class MainWindow(QMainWindow):
         tb_layout.addWidget(make_topbar_btn("스캔/OCR", "scan", self._show_ocr_dialog))
         tb_layout.addWidget(make_topbar_btn("AI", "sparkles", self._show_ai_panel))
 
+        tb_layout.addSpacing(8)
         tb_layout.addWidget(make_divider())
         tb_layout.addStretch()
 
         # Search bar (Moved to the right end)
         search_container = QWidget()
-        search_container.setStyleSheet(SEARCH_CONTAINER_STYLE)
-        search_container.setFixedHeight(30)
+        search_container.setObjectName("searchBarShell")
+        search_container.setFixedHeight(32)
         search_container.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Fixed)
         sl = QHBoxLayout(search_container)
-        sl.setContentsMargins(8, 0, 8, 0)
-        sl.setSpacing(4)
-        
+        sl.setContentsMargins(8, 2, 8, 2)
+        sl.setSpacing(3)
+
         from PyQt6.QtWidgets import QLineEdit
         self._search_input = QLineEdit()
+        self._search_input.setObjectName("searchInput")
         self._search_input.setPlaceholderText("텍스트 찾기")
         self._search_input.setFixedWidth(120)
-        self._search_input.setStyleSheet(SEARCH_INPUT_STYLE)
         self._search_input.returnPressed.connect(self._perform_search)
         sl.addWidget(self._search_input)
-        
+
         search_icon_btn = QToolButton()
-        search_icon_btn.setIcon(svg_icon("search", 14, "#888"))
-        search_icon_btn.setIconSize(QSize(14, 14))
+        search_icon_btn.setObjectName("searchIconButton")
+        search_icon_btn.setIcon(svg_icon("search", 13, "#6B7280"))
+        search_icon_btn.setIconSize(QSize(13, 13))
         search_icon_btn.setFixedSize(20, 20)
-        search_icon_btn.setStyleSheet("QToolButton { border: none; background: transparent; }")
+        search_icon_btn.setAutoRaise(True)
         search_icon_btn.clicked.connect(self._perform_search)
         sl.addWidget(search_icon_btn)
+        sl.setAlignment(search_icon_btn, Qt.AlignmentFlag.AlignVCenter)
 
         self._search_prev_btn = QPushButton("<")
+        self._search_prev_btn.setObjectName("searchNavButton")
         self._search_prev_btn.setFixedSize(22, 22)
-        self._search_prev_btn.setStyleSheet(SEARCH_NAV_BUTTON_STYLE)
         self._search_prev_btn.clicked.connect(lambda: self._navigate_search(-1))
         self._search_prev_btn.hide()
         sl.addWidget(self._search_prev_btn)
+        sl.setAlignment(self._search_prev_btn, Qt.AlignmentFlag.AlignVCenter)
 
         self._search_next_btn = QPushButton(">")
+        self._search_next_btn.setObjectName("searchNavButton")
         self._search_next_btn.setFixedSize(22, 22)
-        self._search_next_btn.setStyleSheet(SEARCH_NAV_BUTTON_STYLE)
         self._search_next_btn.clicked.connect(lambda: self._navigate_search(1))
         self._search_next_btn.hide()
         sl.addWidget(self._search_next_btn)
+        sl.setAlignment(self._search_next_btn, Qt.AlignmentFlag.AlignVCenter)
 
         tb_layout.addWidget(search_container)
-        
-        tb_layout.addSpacing(5)
+
+        tb_layout.addSpacing(8)
 
         # Settings
         settings_btn = make_tool_button("⚙", "설정", "settings")
@@ -556,6 +536,7 @@ class MainWindow(QMainWindow):
 
         # Sub Sidebar (Thumbnails, Bookmarks, Outline)
         self._sidebar = SidebarWidget(self._bookmark_mgr)
+        self._sidebar.setObjectName("leftSidebarShell")
         self._sidebar.page_selected.connect(self._go_to_page)
         self._sidebar.delete_pages.connect(self._delete_pages)
         self._sidebar.rotate_pages.connect(self._rotate_pages)
@@ -566,11 +547,11 @@ class MainWindow(QMainWindow):
         self._sidebar.remove_outline_entry.connect(self._remove_outline_entry)
 
         self._splitter = QSplitter(Qt.Orientation.Horizontal)
-        self._splitter.setStyleSheet("QSplitter::handle { background: #dfe6f0; width: 1px; }")
         self._splitter.addWidget(self._sidebar)
 
         # Center Area: PDF Viewer + Grid View Layout with Bottom Float Toolbar
         center_widget = QWidget()
+        center_widget.setObjectName("centerShell")
         center_layout = QVBoxLayout(center_widget)
         center_layout.setContentsMargins(0, 0, 0, 0)
         center_layout.setSpacing(0)
@@ -592,14 +573,14 @@ class MainWindow(QMainWindow):
 
         # Bottom Float Toolbar (Status + Zoom + Paging)
         bottom_toolbar = QWidget()
+        bottom_toolbar.setObjectName("bottomToolbarShell")
         bottom_toolbar.setFixedHeight(36)
-        bottom_toolbar.setStyleSheet(BOTTOM_TOOLBAR_STYLE)
         bt_hl = QHBoxLayout(bottom_toolbar)
         bt_hl.setContentsMargins(10, 0, 10, 0)
         bt_hl.setSpacing(10)
 
         self._status_label = QLabel("PDF Pro Tool — Windows Edition")
-        self._status_label.setStyleSheet("font-size: 11px; color: #6b7588; padding: 2px;")
+        self._status_label.setObjectName("statusText")
         bt_hl.addWidget(self._status_label)
         bt_hl.addStretch()
 
@@ -620,7 +601,7 @@ class MainWindow(QMainWindow):
         self._page_label = QLabel("—")
         self._page_label.setFixedWidth(60)
         self._page_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self._page_label.setStyleSheet("font-size: 11px; color: #3f4c63;")
+        self._page_label.setObjectName("pageLabel")
         bt_hl.addWidget(self._page_label)
         next_pg_btn = make_tool_button(">", "다음 페이지", "chevron-right")
         next_pg_btn.clicked.connect(self._next_page)
@@ -632,15 +613,11 @@ class MainWindow(QMainWindow):
         zoom_out_btn = make_tool_button("−", "축소", "minus")
         zoom_out_btn.clicked.connect(self._zoom_out)
         bt_hl.addWidget(zoom_out_btn)
-        
+
         self._zoom_input = QLineEdit("100%")
+        self._zoom_input.setObjectName("zoomInput")
         self._zoom_input.setFixedWidth(52)
         self._zoom_input.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self._zoom_input.setStyleSheet(
-            "QLineEdit { font-size: 11px; font-weight: 500; border: 1px solid transparent; "
-            "border-radius: 4px; background: transparent; color: #2f3745; }"
-            "QLineEdit:focus { border: 1px solid #b7c5da; background: #ffffff; }"
-        )
         self._zoom_input.editingFinished.connect(self._apply_zoom_input)
         _orig_focus = self._zoom_input.focusInEvent
         def _zoom_focus_in(event, _orig=_orig_focus):
@@ -648,7 +625,7 @@ class MainWindow(QMainWindow):
             QTimer.singleShot(0, self._zoom_input.selectAll)
         self._zoom_input.focusInEvent = _zoom_focus_in
         bt_hl.addWidget(self._zoom_input)
-        
+
         zoom_in_btn = make_tool_button("+", "확대", "plus")
         zoom_in_btn.clicked.connect(self._zoom_in)
         bt_hl.addWidget(zoom_in_btn)
@@ -658,6 +635,7 @@ class MainWindow(QMainWindow):
 
         # Right panel container
         self._right_panel_container = QWidget()
+        self._right_panel_container.setObjectName("rightPanelHost")
         self._right_panel_container.hide()
         self._right_panel_hl = QHBoxLayout(self._right_panel_container)
         self._right_panel_hl.setContentsMargins(0, 0, 0, 0)
@@ -1784,8 +1762,8 @@ class MainWindow(QMainWindow):
 
         # Add divider line
         divider = QFrame()
+        divider.setObjectName("toolDivider")
         divider.setFrameShape(QFrame.Shape.VLine)
-        divider.setStyleSheet("color: #d0d0d0;")
         self._right_panel_hl.addWidget(divider)
         self._right_panel_hl.addWidget(widget)
 

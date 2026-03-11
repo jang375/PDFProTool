@@ -292,6 +292,7 @@ class ThumbnailPanel(QWidget):
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        self.setObjectName("thumbnailPanel")
         # Accept drops on this plain QWidget — bypasses QAbstractItemView
         self.setAcceptDrops(True)
 
@@ -300,11 +301,12 @@ class ThumbnailPanel(QWidget):
         layout.setSpacing(0)
 
         self._list = _DraggableThumbList()
+        self._list.setObjectName("thumbnailList")
         self._list.setViewMode(QListWidget.ViewMode.IconMode)
         self._list.setIconSize(QSize(THUMB_W, THUMB_H))
         self._list.setResizeMode(QListWidget.ResizeMode.Adjust)
         self._list.setMovement(QListWidget.Movement.Static)
-        self._list.setSpacing(10)
+        self._list.setSpacing(12)
         self._list.setUniformItemSizes(True)
         self._list.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self._list.setMinimumWidth(160)
@@ -317,11 +319,6 @@ class ThumbnailPanel(QWidget):
         self._list.customContextMenuRequested.connect(self._show_context_menu)
         self._list.insert_pdf_at.connect(self.insert_pdf_at)
         self._list.delete_selected.connect(self.delete_pages)
-        self._list.setStyleSheet(
-            "QListWidget { background: #fafafa; border: none; padding: 5px; }"
-            "QListWidget::item { border-radius: 6px; }"
-            "QListWidget::item:selected { background: rgba(41, 121, 255, 0.12); }"
-        )
         layout.addWidget(self._list)
 
         self._doc: Optional[fitz.Document] = None
@@ -845,10 +842,12 @@ class PageGridView(QWidget):
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        self.setObjectName("pageGridView")
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
 
         self._list = QListWidget()
+        self._list.setObjectName("pageGridList")
         self._list.setViewMode(QListWidget.ViewMode.IconMode)
         self._list.setIconSize(QSize(GRID_VIEW_THUMB_W, GRID_VIEW_THUMB_H))
         self._list.setResizeMode(QListWidget.ResizeMode.Adjust)
@@ -857,11 +856,6 @@ class PageGridView(QWidget):
         self._list.setUniformItemSizes(True)
         self._list.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
         self._list.itemDoubleClicked.connect(self._on_double_clicked)
-        self._list.setStyleSheet(
-            "QListWidget { background: #f0f0f0; border: none; padding: 10px; }"
-            "QListWidget::item { border-radius: 6px; }"
-            "QListWidget::item:selected { background: rgba(41, 121, 255, 0.15); }"
-        )
         layout.addWidget(self._list)
 
         self._doc: Optional[fitz.Document] = None
