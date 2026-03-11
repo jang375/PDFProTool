@@ -301,6 +301,8 @@ def _create_update_progress_vbs(version: str) -> str:
 
     hta_content = """<html>
 <head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta charset="utf-8" />
 <title>PDF Pro Tool 업데이트</title>
 <HTA:APPLICATION
   ID="UpdateProgress"
@@ -337,7 +339,7 @@ window.moveTo((screen.width - 420) / 2, (screen.height - 300) / 2);
 </body>
 </html>"""
 
-    with open(hta_path, "w", encoding="utf-8") as f:
+    with open(hta_path, "w", encoding="utf-8-sig") as f:
         f.write(hta_content)
 
     return hta_path
