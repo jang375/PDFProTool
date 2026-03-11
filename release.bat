@@ -7,8 +7,8 @@ echo   PDF Pro Tool - 릴리즈 자동화 스크립트
 echo ============================================
 echo.
 
-:: ── 1. version.py에서 버전 읽기 ──
-for /f "tokens=2 delims='" %%a in ('findstr "__version__" version.py') do set VERSION=%%a
+:: ── 1. version.py에서 버전 읽기 (python import) ──
+for /f %%a in ('python -c "import version; print(version.__version__)"') do set VERSION=%%a
 if "%VERSION%"=="" (
     echo [오류] version.py에서 버전을 읽을 수 없습니다.
     pause
