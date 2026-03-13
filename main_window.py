@@ -124,17 +124,17 @@ TOOL_BUTTON_STYLE = (
 )
 
 TOPBAR_BUTTON_STYLE = (
-    "QPushButton { padding: 6px 11px; font-size: 12px; font-weight: 500; color: #1F2937; "
-    "border: 1px solid transparent; background: transparent; border-radius: 8px; margin: 0px; }"
-    "QPushButton:hover { background: #EFF4FF; border: 1px solid #D6E4FF; color: #1D4ED8; }"
-    "QPushButton:pressed { background: #E5EEFF; border: 1px solid #C7DAFF; }"
+    "QPushButton { padding: 7px 12px; font-size: 12px; font-weight: 600; color: #334155; "
+    "border: 1px solid transparent; background: transparent; border-radius: 10px; margin: 0px; }"
+    "QPushButton:hover { background: #F8FBFF; border: 1px solid #D7E5F8; color: #0F4C81; }"
+    "QPushButton:pressed { background: #EEF5FF; border: 1px solid #C5D8F0; }"
 )
 
 TOPBAR_BUTTON_ACTIVE_STYLE = (
-    "QPushButton { padding: 6px 11px; font-size: 12px; font-weight: 600; color: #1D4ED8; "
-    "border: 1px solid #BFDBFE; background: #EBF3FF; border-radius: 8px; margin: 0px; }"
-    "QPushButton:hover { background: #E3EEFF; border: 1px solid #93C5FD; }"
-    "QPushButton:pressed { background: #DCE9FF; border: 1px solid #7FB2F6; }"
+    "QPushButton { padding: 7px 12px; font-size: 12px; font-weight: 700; color: #0F4C81; "
+    "border: 1px solid #BED3EA; background: #EAF3FD; border-radius: 10px; margin: 0px; }"
+    "QPushButton:hover { background: #E3EFFB; border: 1px solid #96B8DA; }"
+    "QPushButton:pressed { background: #DCEBFA; border: 1px solid #7EA7CF; }"
 )
 
 DIVIDER_STYLE = "background: #d7dee8; min-width: 1px; max-width: 1px; margin: 4px 5px;"
@@ -391,17 +391,47 @@ class MainWindow(QMainWindow):
         # ── Main Content Area (Right Side) ──
         right_container = QWidget()
         self._global_left_sidebar = None # No longer used
-        root_hl.addWidget(right_container, 1)
         right_vl = QVBoxLayout(right_container)
         right_vl.setContentsMargins(0, 0, 0, 0)
         right_vl.setSpacing(0)
 
-        # ── Top Bar Row 1: Tabs ──
+        # ── Top Bar Row 1: Brand + Status ──
+        self._top_header_widget = QWidget()
+        self._top_header_widget.setObjectName("appHeaderShell")
+        self._top_header_widget.setFixedHeight(72)
+        header_layout = QHBoxLayout(self._top_header_widget)
+        header_layout.setContentsMargins(18, 12, 18, 12)
+        header_layout.setSpacing(14)
+
+        brand_mark = QLabel("P")
+        brand_mark.setObjectName("headerBrandMark")
+        brand_mark.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        brand_mark.setFixedSize(40, 40)
+        header_layout.addWidget(brand_mark)
+
+        brand_text_wrap = QWidget()
+        brand_text_layout = QVBoxLayout(brand_text_wrap)
+        brand_text_layout.setContentsMargins(0, 0, 0, 0)
+        brand_text_layout.setSpacing(2)
+
+        brand_title = QLabel("PDF Pro Tool")
+        brand_title.setObjectName("headerBrandTitle")
+        brand_text_layout.addWidget(brand_title)
+
+        brand_subtitle = QLabel("문서 편집 · OCR · AI 보조 작업")
+        brand_subtitle.setObjectName("headerBrandSubtitle")
+        brand_text_layout.addWidget(brand_subtitle)
+        header_layout.addWidget(brand_text_wrap)
+        header_layout.addStretch()
+
+        right_vl.addWidget(self._top_header_widget)
+
+        # ── Top Bar Row 2: Tabs ──
         self._top_tab_widget = QWidget()
         self._top_tab_widget.setObjectName("topTabShell")
-        self._top_tab_widget.setFixedHeight(35)
+        self._top_tab_widget.setFixedHeight(42)
         tab_layout = QHBoxLayout(self._top_tab_widget)
-        tab_layout.setContentsMargins(10, 0, 10, 0)
+        tab_layout.setContentsMargins(14, 4, 14, 0)
         tab_layout.setSpacing(6)
 
         # Tabs
@@ -415,7 +445,7 @@ class MainWindow(QMainWindow):
         tab_layout.addWidget(self._tab_bar)
 
         add_tab_btn = QToolButton()
-        add_tab_btn.setText("+ 만들기")
+        add_tab_btn.setText("+ 새 탭")
         add_tab_btn.setToolTip("새 탭 추가")
         add_tab_btn.setObjectName("addTabButton")
         add_tab_btn.clicked.connect(self._add_new_tab)
@@ -427,12 +457,10 @@ class MainWindow(QMainWindow):
         # ── Top Bar Row 2: Tools & Controls ──
         self._top_tools_widget = QWidget()
         self._top_tools_widget.setObjectName("topToolbarShell")
-        self._top_tools_widget.setFixedHeight(45)
+        self._top_tools_widget.setFixedHeight(52)
         tb_layout = QHBoxLayout(self._top_tools_widget)
-        tb_layout.setContentsMargins(10, 0, 10, 0)
+        tb_layout.setContentsMargins(14, 8, 14, 8)
         tb_layout.setSpacing(8)
-
-        tb_layout.addStretch()
         
         # File ops
         open_btn = make_tool_button("📂", "열기 (Ctrl+O)", "folder-open")
@@ -443,7 +471,10 @@ class MainWindow(QMainWindow):
         save_btn.clicked.connect(self._save_file)
         tb_layout.addWidget(save_btn)
         tb_layout.addWidget(make_divider())
-        tb_layout.addSpacing(8)
+
+        quick_tools_label = QLabel("빠른 작업")
+        quick_tools_label.setObjectName("quickToolsBadge")
+        tb_layout.addWidget(quick_tools_label)
 
         # ── Tools ──
 
@@ -470,14 +501,13 @@ class MainWindow(QMainWindow):
         tb_layout.addWidget(make_topbar_btn("스캔/OCR", "scan", self._show_ocr_dialog))
         tb_layout.addWidget(make_topbar_btn("AI", "sparkles", self._show_ai_panel))
 
-        tb_layout.addSpacing(8)
         tb_layout.addWidget(make_divider())
         tb_layout.addStretch()
 
         # Search bar (Moved to the right end)
         search_container = QWidget()
         search_container.setObjectName("searchBarShell")
-        search_container.setFixedHeight(32)
+        search_container.setFixedHeight(34)
         search_container.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Fixed)
         sl = QHBoxLayout(search_container)
         sl.setContentsMargins(8, 2, 8, 2)
@@ -487,7 +517,7 @@ class MainWindow(QMainWindow):
         self._search_input = QLineEdit()
         self._search_input.setObjectName("searchInput")
         self._search_input.setPlaceholderText("텍스트 찾기")
-        self._search_input.setFixedWidth(120)
+        self._search_input.setFixedWidth(164)
         self._search_input.returnPressed.connect(self._perform_search)
         sl.addWidget(self._search_input)
 
@@ -530,8 +560,9 @@ class MainWindow(QMainWindow):
 
         # ── Main Splitter (Left Sidebar / PDF / Right Panels) ──
         content_area = QWidget()
+        content_area.setObjectName("workspaceShell")
         content_hl = QHBoxLayout(content_area)
-        content_hl.setContentsMargins(0, 0, 0, 0)
+        content_hl.setContentsMargins(12, 12, 12, 10)
         content_hl.setSpacing(0)
 
         # Sub Sidebar (Thumbnails, Bookmarks, Outline)
@@ -547,14 +578,15 @@ class MainWindow(QMainWindow):
         self._sidebar.remove_outline_entry.connect(self._remove_outline_entry)
 
         self._splitter = QSplitter(Qt.Orientation.Horizontal)
+        self._splitter.setChildrenCollapsible(False)
         self._splitter.addWidget(self._sidebar)
 
         # Center Area: PDF Viewer + Grid View Layout with Bottom Float Toolbar
         center_widget = QWidget()
         center_widget.setObjectName("centerShell")
         center_layout = QVBoxLayout(center_widget)
-        center_layout.setContentsMargins(0, 0, 0, 0)
-        center_layout.setSpacing(0)
+        center_layout.setContentsMargins(14, 14, 14, 12)
+        center_layout.setSpacing(12)
 
         self._pdf_scroll = PDFScrollView()
         self._pdf_scroll.page_changed.connect(self._on_pdf_page_changed)
@@ -576,10 +608,10 @@ class MainWindow(QMainWindow):
         bottom_toolbar.setObjectName("bottomToolbarShell")
         bottom_toolbar.setFixedHeight(36)
         bt_hl = QHBoxLayout(bottom_toolbar)
-        bt_hl.setContentsMargins(10, 0, 10, 0)
+        bt_hl.setContentsMargins(12, 0, 12, 0)
         bt_hl.setSpacing(10)
 
-        self._status_label = QLabel("PDF Pro Tool — Windows Edition")
+        self._status_label = QLabel("문서를 열어 시작하세요")
         self._status_label.setObjectName("statusText")
         bt_hl.addWidget(self._status_label)
         bt_hl.addStretch()
@@ -638,11 +670,11 @@ class MainWindow(QMainWindow):
         self._right_panel_container.setObjectName("rightPanelHost")
         self._right_panel_container.hide()
         self._right_panel_hl = QHBoxLayout(self._right_panel_container)
-        self._right_panel_hl.setContentsMargins(0, 0, 0, 0)
+        self._right_panel_hl.setContentsMargins(0, 14, 14, 12)
         self._right_panel_hl.setSpacing(0)
 
         self._splitter.addWidget(self._right_panel_container)
-        self._splitter.setSizes([200, 800, 0])
+        self._splitter.setSizes([260, 920, 0])
         content_hl.addWidget(self._splitter)
 
         right_vl.addWidget(content_area, 1)
@@ -702,6 +734,8 @@ class MainWindow(QMainWindow):
             self._pdf_scroll.set_document(None)
             self._sidebar.load_document(None)
             self._tab_bar.setTabText(0, "새 탭")
+            self._update_toolbar_state()
+            self._set_status("문서를 열어 시작하세요")
             self._update_welcome_page()
             return
 
@@ -1773,7 +1807,7 @@ class MainWindow(QMainWindow):
 
         # Set container width to accommodate the panel
         panel_w = widget.minimumWidth() or widget.sizeHint().width()
-        target_width = max(panel_w, 260) + 4  # +4 for divider + margins
+        target_width = max(panel_w, 260) + 18
         
         self._right_panel_container.setMinimumWidth(target_width)
         
@@ -1885,6 +1919,7 @@ class MainWindow(QMainWindow):
         tab = self._active_tab()
         has_doc = doc is not None
         self._update_page_label()
+        self._update_header_context()
 
     def _update_page_label(self):
         tab = self._active_tab()
@@ -1894,8 +1929,22 @@ class MainWindow(QMainWindow):
         else:
             self._page_label.setText("—")
 
+    def _update_header_context(self):
+        if not hasattr(self, "_header_meta_label"):
+            return
+        doc = self._active_doc()
+        tab = self._active_tab()
+        if doc and tab:
+            name = Path(tab.file_path).name if tab.file_path else tab.display_name
+            self._header_meta_label.setText(f"{name} · {doc.page_count}페이지")
+        else:
+            recent_count = len(self._get_recent_files())
+            self._header_meta_label.setText(f"최근 문서 {recent_count}개")
+
     def _set_status(self, msg: str):
         self._status_label.setText(msg)
+        if hasattr(self, "_header_status_label"):
+            self._header_status_label.setText(msg)
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
@@ -2083,6 +2132,7 @@ class MainWindow(QMainWindow):
             self._welcome_page.raise_()
         else:
             self._welcome_page.hide()
+        self._update_header_context()
 
     # ── Close ─────────────────────────────────
 

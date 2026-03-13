@@ -15,10 +15,12 @@ from PyQt6.QtGui import QColor, QDrag, QIcon, QImage, QPainter, QPen, QPixmap
 from PyQt6.QtWidgets import (
     QAbstractItemView, QApplication, QFrame, QHBoxLayout, QLabel,
     QListWidget, QListWidgetItem, QMenu, QPushButton, QSizePolicy,
-    QTabWidget, QTreeWidget, QTreeWidgetItem, QVBoxLayout, QWidget,
+    QButtonGroup, QStackedWidget, QToolButton, QTreeWidget, QTreeWidgetItem,
+    QVBoxLayout, QWidget,
 )
 
 from models import BookmarkManager
+from icons import icon as svg_icon
 
 
 # ─────────────────────────────────────────────
@@ -300,6 +302,24 @@ class ThumbnailPanel(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
 
+        header = QWidget()
+        header.setObjectName("sidebarSectionHeader")
+        header_layout = QHBoxLayout(header)
+        header_layout.setContentsMargins(14, 12, 14, 10)
+        header_layout.setSpacing(8)
+
+        title = QLabel("페이지 썸네일")
+        title.setObjectName("sidebarSectionTitle")
+        header_layout.addWidget(title)
+
+        header_layout.addStretch()
+
+        self._summary_label = QLabel("문서 없음")
+        self._summary_label.setObjectName("sidebarSectionMeta")
+        header_layout.addWidget(self._summary_label)
+
+        layout.addWidget(header)
+
         self._list = _DraggableThumbList()
         self._list.setObjectName("thumbnailList")
         self._list.setViewMode(QListWidget.ViewMode.IconMode)
@@ -326,6 +346,7 @@ class ThumbnailPanel(QWidget):
         self._current_page: int = 0
         self._bookmark_pages: set[int] = set()
         self._workers: list[ThumbnailWorker] = []
+        self._refresh_header()
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
@@ -358,6 +379,7 @@ class ThumbnailPanel(QWidget):
         self._file_path = file_path
         self._doc_bytes = doc_bytes
         self._bookmark_pages = bookmarks
+        self._refresh_header()
 
         if not doc:
             return
@@ -377,6 +399,7 @@ class ThumbnailPanel(QWidget):
             self._list.setCurrentRow(self._current_page)
 
         self._update_layout()
+        self._refresh_header()
 
         # Render from current page outward so visible thumbnails appear first
         center = max(0, min(self._current_page, doc.page_count - 1))
@@ -414,6 +437,7 @@ class ThumbnailPanel(QWidget):
         if self._current_page == page:
             return
         self._current_page = page
+        self._refresh_header()
         if 0 <= page < self._list.count():
             self._list.blockSignals(True)
             # setCurrentRow는 기존 다중 선택을 해제하므로,
@@ -425,6 +449,13 @@ class ThumbnailPanel(QWidget):
                 )
                 self._list.scrollToItem(item)
             self._list.blockSignals(False)
+
+    def _refresh_header(self):
+        if not self._doc:
+            self._summary_label.setText("문서 없음")
+            return
+        current = min(max(self._current_page + 1, 1), self._doc.page_count)
+        self._summary_label.setText(f"{current} / {self._doc.page_count} 페이지")
 
     # ── External PDF drop handling ──
     # Handled here (plain QWidget) instead of _DraggableThumbList
@@ -558,44 +589,38 @@ class BookmarksPanel(QWidget):
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        self.setObjectName("sidebarSectionPanel")
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
 
         # Header with "+" button
         header = QWidget()
+        header.setObjectName("sidebarSectionHeader")
         header_layout = QHBoxLayout(header)
-        header_layout.setContentsMargins(8, 4, 8, 4)
+        header_layout.setContentsMargins(14, 12, 14, 10)
         lbl = QLabel("북마크")
-        lbl.setStyleSheet("font-size: 11px; color: #666;")
+        lbl.setObjectName("sidebarSectionTitle")
         header_layout.addWidget(lbl)
         header_layout.addStretch()
         add_btn = QPushButton("+")
         add_btn.setFixedSize(22, 22)
         add_btn.setToolTip("현재 페이지 북마크 추가/제거")
-        add_btn.setStyleSheet(
-            "QPushButton { padding: 0px; border: 1px solid #ccc; border-radius: 4px; "
-            "font-size: 15px; font-weight: bold; color: #444; background: #f0f0f0; }"
-            "QPushButton:hover { background: #e0e0e0; }"
-        )
+        add_btn.setObjectName("sidebarMiniActionButton")
         add_btn.clicked.connect(self.add_bookmark.emit)
         header_layout.addWidget(add_btn)
         layout.addWidget(header)
 
-        line = QFrame()
-        line.setFrameShape(QFrame.Shape.HLine)
-        line.setStyleSheet("color: #ddd;")
-        layout.addWidget(line)
-
         self._list = QListWidget()
+        self._list.setObjectName("sidebarList")
         self._list.itemDoubleClicked.connect(self._on_item_double_clicked)
         self._list.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self._list.customContextMenuRequested.connect(self._show_context_menu)
         layout.addWidget(self._list, 1)  # stretch=1 → 남은 공간 전부 사용
 
         self._empty_label = QLabel("북마크 없음")
+        self._empty_label.setObjectName("sidebarEmptyState")
         self._empty_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self._empty_label.setStyleSheet("color: #999; font-size: 12px;")
         layout.addWidget(self._empty_label, 1)
 
         # 초기 상태: 리스트 숨기고 빈 라벨 표시
@@ -644,35 +669,29 @@ class OutlinePanel(QWidget):
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        self.setObjectName("sidebarSectionPanel")
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
 
         header = QWidget()
+        header.setObjectName("sidebarSectionHeader")
         header_layout = QHBoxLayout(header)
-        header_layout.setContentsMargins(8, 4, 8, 4)
+        header_layout.setContentsMargins(14, 12, 14, 10)
         lbl = QLabel("목차")
-        lbl.setStyleSheet("font-size: 11px; color: #666;")
+        lbl.setObjectName("sidebarSectionTitle")
         header_layout.addWidget(lbl)
         header_layout.addStretch()
         add_btn = QPushButton("+")
         add_btn.setFixedSize(22, 22)
         add_btn.setToolTip("현재 페이지를 목차에 추가")
-        add_btn.setStyleSheet(
-            "QPushButton { padding: 0px; border: 1px solid #ccc; border-radius: 4px; "
-            "font-size: 15px; font-weight: bold; color: #444; background: #f0f0f0; }"
-            "QPushButton:hover { background: #e0e0e0; }"
-        )
+        add_btn.setObjectName("sidebarMiniActionButton")
         add_btn.clicked.connect(self.add_outline_entry.emit)
         header_layout.addWidget(add_btn)
         layout.addWidget(header)
 
-        line = QFrame()
-        line.setFrameShape(QFrame.Shape.HLine)
-        line.setStyleSheet("color: #ddd;")
-        layout.addWidget(line)
-
         self._tree = QTreeWidget()
+        self._tree.setObjectName("sidebarTree")
         self._tree.setHeaderHidden(True)
         self._tree.setIndentation(16)
         self._tree.itemDoubleClicked.connect(self._on_item_activated)
@@ -681,8 +700,8 @@ class OutlinePanel(QWidget):
         layout.addWidget(self._tree, 1)
 
         self._empty_label = QLabel("목차 없음")
+        self._empty_label.setObjectName("sidebarEmptyState")
         self._empty_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self._empty_label.setStyleSheet("color: #999; font-size: 12px;")
         layout.addWidget(self._empty_label, 1)
 
         # 초기 상태: 트리 숨기고 빈 라벨 표시
@@ -760,19 +779,27 @@ class SidebarWidget(QWidget):
 
     def __init__(self, bookmark_mgr: BookmarkManager, parent=None):
         super().__init__(parent)
-        self.setMinimumWidth(160)
-        self.setMaximumWidth(220)
+        self.setMinimumWidth(240)
+        self.setMaximumWidth(320)
         self._bookmark_mgr = bookmark_mgr
         self._file_path: str = ""
         self._doc: Optional[fitz.Document] = None
 
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setContentsMargins(10, 10, 10, 10)
         layout.setSpacing(0)
 
-        self._tabs = QTabWidget()
-        self._tabs.setTabPosition(QTabWidget.TabPosition.North)
-        self._tabs.setDocumentMode(True)
+        shell = QWidget()
+        shell.setObjectName("sidebarContentShell")
+        shell_layout = QVBoxLayout(shell)
+        shell_layout.setContentsMargins(10, 10, 10, 10)
+        shell_layout.setSpacing(10)
+
+        nav_strip = QWidget()
+        nav_strip.setObjectName("sidebarNavStrip")
+        nav_layout = QHBoxLayout(nav_strip)
+        nav_layout.setContentsMargins(8, 8, 8, 8)
+        nav_layout.setSpacing(8)
 
         self._thumb_panel = ThumbnailPanel()
         self._thumb_panel.page_selected.connect(self.page_selected)
@@ -790,11 +817,37 @@ class SidebarWidget(QWidget):
         self._outline_panel.add_outline_entry.connect(self.add_outline_entry)
         self._outline_panel.remove_outline_entry.connect(self.remove_outline_entry)
 
-        self._tabs.addTab(self._thumb_panel, "썸네일")
-        self._tabs.addTab(self._bm_panel, "북마크")
-        self._tabs.addTab(self._outline_panel, "목차")
+        self._stack = QStackedWidget()
+        self._stack.setObjectName("sidebarContentStack")
+        self._stack.addWidget(self._thumb_panel)
+        self._stack.addWidget(self._bm_panel)
+        self._stack.addWidget(self._outline_panel)
 
-        layout.addWidget(self._tabs)
+        self._nav_group = QButtonGroup(self)
+        self._nav_group.setExclusive(True)
+        nav_specs = [
+            ("썸네일", "layout"),
+            ("북마크", "bookmark"),
+            ("목차", "list-tree"),
+        ]
+        for idx, (tooltip, icon_name) in enumerate(nav_specs):
+            btn = QToolButton()
+            btn.setObjectName("sidebarNavButton")
+            btn.setCheckable(True)
+            btn.setIcon(svg_icon(icon_name, 18))
+            btn.setIconSize(QSize(18, 18))
+            btn.setToolTip(tooltip)
+            btn.setFixedSize(44, 36)
+            btn.clicked.connect(lambda _checked=False, i=idx: self._set_panel_index(i))
+            self._nav_group.addButton(btn, idx)
+            nav_layout.addWidget(btn, 0, Qt.AlignmentFlag.AlignLeft)
+
+        nav_layout.addStretch()
+        shell_layout.addWidget(nav_strip, 0)
+        shell_layout.addWidget(self._stack, 1)
+
+        layout.addWidget(shell)
+        self._set_panel_index(0)
 
         self._bookmark_mgr.bookmarks_changed.connect(self._refresh_bookmarks)
 
@@ -811,6 +864,12 @@ class SidebarWidget(QWidget):
 
     def set_current_page(self, page: int):
         self._thumb_panel.set_current_page(page)
+
+    def _set_panel_index(self, index: int):
+        self._stack.setCurrentIndex(index)
+        btn = self._nav_group.button(index)
+        if btn and not btn.isChecked():
+            btn.setChecked(True)
 
     def _refresh_bookmarks(self):
         if self._file_path:

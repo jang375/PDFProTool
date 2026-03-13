@@ -748,6 +748,7 @@ class SearchResultsPanel(QWidget):
 
         # Results list
         self._list = QListWidget()
+        self._list.setObjectName("searchResultsList")
         self._list.itemClicked.connect(self._on_item_clicked)
         layout.addWidget(self._list)
 
@@ -841,6 +842,7 @@ class AIToolPanel(QWidget):
 
         # Content
         content = QWidget()
+        content.setObjectName("aiPanelBody")
         vl = QVBoxLayout(content)
         vl.setContentsMargins(12, 16, 12, 16)
         vl.setSpacing(16)
@@ -859,39 +861,37 @@ class AIToolPanel(QWidget):
 
         # Summarize Button
         sum_btn = QPushButton("📄 AI 요약")
+        sum_btn.setObjectName("aiActionButton")
         sum_btn.setToolTip("현재 화면에 표시된 페이지의 텍스트를 요약합니다. (미리 OCR이 되어 있어야 합니다)")
-        sum_btn.setStyleSheet("padding: 10px; font-size: 13px; font-weight: bold;")
         sum_btn.clicked.connect(self.summarize_requested.emit)
         vl.addWidget(sum_btn)
 
         # Table Extract Button
         tbl_btn = QPushButton("📊 AI 표 추출 (영역 지정)")
+        tbl_btn.setObjectName("aiActionButton")
         tbl_btn.setToolTip("마우스로 표 영역을 지정하면 AI가 분석하여 CSV로 변환해 줍니다.")
-        tbl_btn.setStyleSheet("padding: 10px; font-size: 13px; font-weight: bold;")
         tbl_btn.clicked.connect(self.table_extract_requested.emit)
         vl.addWidget(tbl_btn)
 
         # OCR Correct Button
         ocr_btn = QPushButton("🔍 AI 오타 교정")
+        ocr_btn.setObjectName("aiActionButton")
         ocr_btn.setToolTip("OCR 결과의 오타를 문맥에 맞게 교정합니다.")
-        ocr_btn.setStyleSheet("padding: 10px; font-size: 13px; font-weight: bold;")
         ocr_btn.clicked.connect(self.ocr_correct_requested.emit)
         vl.addWidget(ocr_btn)
 
         # AI Chat Section
         chat_group = QGroupBox("💬 문서 채팅")
-        chat_group.setStyleSheet("font-weight: bold; font-size: 13px; color: #333; margin-top: 10px;")
+        chat_group.setObjectName("aiChatCard")
         chat_vl = QVBoxLayout(chat_group)
         chat_vl.setContentsMargins(8, 20, 8, 8)
         chat_vl.setSpacing(8)
         
         # Scroll area for chat bubbles
         self._chat_scroll = QScrollArea()
+        self._chat_scroll.setObjectName("aiChatScroll")
         self._chat_scroll.setWidgetResizable(True)
         self._chat_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self._chat_scroll.setStyleSheet(
-            "QScrollArea { border: 1px solid #ccc; border-radius: 4px; background: #f9f9f9; }"
-        )
 
         self._chat_msg_container = QWidget()
         self._chat_msg_container.setStyleSheet("background: #f9f9f9;")
@@ -911,6 +911,7 @@ class AIToolPanel(QWidget):
         # 사각 테두리를 사용하고, inputMethodEvent에서 ensureCursorVisible을
         # 호출하여 조합 중인 글자도 뷰포트 안에 유지한다.
         self.chat_input = _ChatLineEdit()
+        self.chat_input.setObjectName("aiChatInput")
         self.chat_input.setFixedHeight(36)
         self.chat_input.setFrameShape(QFrame.Shape.NoFrame)
         self.chat_input.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
@@ -918,21 +919,12 @@ class AIToolPanel(QWidget):
         self.chat_input.setLineWrapMode(QPlainTextEdit.LineWrapMode.NoWrap)
         self.chat_input.setPlaceholderText("질문을 입력하세요...")
         self.chat_input.document().setDocumentMargin(0)
-        self.chat_input.setStyleSheet(
-            "QPlainTextEdit { font-size: 12px; font-weight: normal;"
-            " border: 1px solid #ccc; background: white; }"
-            "QPlainTextEdit:focus { border: 1px solid #90CAF9; }"
-        )
         self.chat_input.returnPressed.connect(self._on_send_chat)
         chat_hl.addWidget(self.chat_input, 1)
 
         send_btn = QPushButton("전송")
+        send_btn.setObjectName("aiSendButton")
         send_btn.setFixedHeight(36)
-        send_btn.setStyleSheet(
-            "QPushButton { font-size: 12px; font-weight: normal; padding: 0 14px;"
-            " background: #E3F2FD; border: 1px solid #BBDEFB; border-radius: 6px; color: #1565C0; }"
-            "QPushButton:hover { background: #BBDEFB; }"
-        )
         send_btn.clicked.connect(self._on_send_chat)
         chat_hl.addWidget(send_btn)
         
