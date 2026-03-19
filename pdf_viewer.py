@@ -36,7 +36,7 @@ from PyQt6.QtWidgets import (
     QApplication, QInputDialog, QMenu, QScrollArea, QSizePolicy,
     QWidget,
 )
-from PyQt6.QtCore import QThreadPool, QRunnable, QObject
+from PyQt6.QtCore import QThreadPool, QRunnable, QObject, QThread
 
 from collections import OrderedDict
 
@@ -350,6 +350,32 @@ class AnnotHit:
         self.page_obj = page_obj # MUST store page reference to prevent C-level use-after-free segfaults
 
 
+class SnippetOCRWorker(QThread):
+    """Background worker to OCR a snippet of garbled text."""
+    finished_ocr = pyqtSignal(str)
+    
+    def __init__(self, img_bytes: bytes, parent=None):
+        super().__init__(parent)
+        self.img_bytes = img_bytes
+        
+    def run(self):
+        try:
+            import easyocr
+            import os
+            model_dir = os.path.join(os.path.expanduser("~"), ".PDFProTool", "easyocr", "model")
+            reader = easyocr.Reader(
+                ["ko", "en"],
+                gpu=False,
+                verbose=False,
+                model_storage_directory=model_dir,
+            )
+            results = reader.readtext(self.img_bytes, detail=0, paragraph=True)
+            text = "\n".join(results)
+            self.finished_ocr.emit(text)
+        except Exception as e:
+            print("Snippet OCR failed:", e)
+            self.finished_ocr.emit("")
+
 # ─────────────────────────────────────────────
 # Core PDF Widget
 # ─────────────────────────────────────────────
@@ -366,6 +392,7 @@ class PDFViewWidget(QWidget):
     doc_modified = pyqtSignal()
     text_placed = pyqtSignal()
     text_copied = pyqtSignal(int)  # char count copied to clipboard
+    status_message_requested = pyqtSignal(str)
     annot_edit_requested = pyqtSignal(object, int)  # (annot, page_index)
 
     # Interaction modes
@@ -1383,9 +1410,40 @@ class PDFViewWidget(QWidget):
                         lines.append(cur_line_words)
                     full_text = "\n".join(" ".join(ws) for ws in lines).strip()
                     if full_text:
-                        self._text_sel_text = full_text
-                        QApplication.clipboard().setText(full_text)
-                        self.text_copied.emit(len(full_text))
+                        q_count = full_text.count('?') + full_text.count('\ufffd')
+                        if len(full_text) >= 2 and q_count / len(full_text) >= 0.3:
+                            if hasattr(self, "status_message_requested"):
+                                self.status_message_requested.emit("텍스트 깨짐 감지됨. 부분 OCR 추출 중...")
+                            mat = fitz.Matrix(3.0, 3.0)
+                            r0 = self._text_sel_rects[0]
+                            for rx in self._text_sel_rects[1:]:
+                                r0 = r0.include_rect(rx)
+                            r0 = fitz.Rect(r0.x0 - 2, r0.y0 - 2, r0.x1 + 2, r0.y1 + 2)
+                            try:
+                                pix = page.get_pixmap(matrix=mat, clip=r0, alpha=False)
+                                img_bytes = pix.tobytes("png")
+                                worker = SnippetOCRWorker(img_bytes, self)
+                                def on_ocr_done(ocr_text):
+                                    final_text = ocr_text.strip() if ocr_text.strip() else full_text
+                                    self._text_sel_text = final_text
+                                    QApplication.clipboard().setText(final_text)
+                                    self.text_copied.emit(len(final_text))
+                                    self._text_sel_rects = []
+                                    self._snippet_ocr_worker = None
+                                    self.update()
+                                worker.finished_ocr.connect(on_ocr_done)
+                                self._snippet_ocr_worker = worker
+                                worker.start()
+                            except Exception:
+                                self._text_sel_text = full_text
+                                QApplication.clipboard().setText(full_text)
+                                self.text_copied.emit(len(full_text))
+                                self._text_sel_rects = []
+                        else:
+                            self._text_sel_text = full_text
+                            QApplication.clipboard().setText(full_text)
+                            self.text_copied.emit(len(full_text))
+                            self._text_sel_rects = []
                     else:
                         self._text_sel_rects = []
                 except Exception:

@@ -88,6 +88,10 @@ class ThumbnailWorker(QThread):
 
 THUMB_W = 140
 THUMB_H = 185
+THUMB_MAX_SCALE = 1.2
+THUMB_LABEL_H = 20
+THUMB_GUTTER_W = 20
+SIDEBAR_CHROME_W = 60
 
 # Grid view (full-screen page overview)
 GRID_VIEW_THUMB_W = 130
@@ -115,9 +119,15 @@ class _DraggableThumbList(QListWidget):
         self.setDragEnabled(False)
         self.setAcceptDrops(False)
         self.viewport().setAcceptDrops(False)
+        self.setFlow(QListWidget.Flow.TopToBottom)
+        self.setWrapping(False)
         self._drop_indicator_index: int = -1
         self._doc: Optional[fitz.Document] = None
         self._drag_start_pos: Optional[QPoint] = None
+        self.horizontalScrollBar().rangeChanged.connect(self._lock_horizontal_scroll)
+
+    def _lock_horizontal_scroll(self, _min_value: int, _max_value: int):
+        self.horizontalScrollBar().setValue(0)
 
     def set_doc(self, doc: Optional[fitz.Document]):
         self._doc = doc
@@ -172,6 +182,10 @@ class _DraggableThumbList(QListWidget):
                 self.delete_selected.emit(selected_rows)
                 return
         super().keyPressEvent(event)
+
+    def wheelEvent(self, event):
+        super().wheelEvent(event)
+        self._lock_horizontal_scroll(0, 0)
 
     # ── Drag out: export selected pages as temporary PDF ──
 
@@ -323,7 +337,6 @@ class ThumbnailPanel(QWidget):
         self._list = _DraggableThumbList()
         self._list.setObjectName("thumbnailList")
         self._list.setViewMode(QListWidget.ViewMode.IconMode)
-        self._list.setIconSize(QSize(THUMB_W, THUMB_H))
         self._list.setResizeMode(QListWidget.ResizeMode.Adjust)
         self._list.setMovement(QListWidget.Movement.Static)
         self._list.setSpacing(12)
@@ -346,11 +359,60 @@ class ThumbnailPanel(QWidget):
         self._current_page: int = 0
         self._bookmark_pages: set[int] = set()
         self._workers: list[ThumbnailWorker] = []
+        self._thumb_size = QSize(THUMB_W, THUMB_H)
+        self._thumb_images: dict[int, QImage] = {}
+        self._list.setIconSize(self._thumb_size)
         self._refresh_header()
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
         self._update_layout()
+
+    @classmethod
+    def preferred_sidebar_width(cls) -> int:
+        return THUMB_W + THUMB_GUTTER_W + SIDEBAR_CHROME_W
+
+    @classmethod
+    def maximum_sidebar_width(cls) -> int:
+        return int(round(THUMB_W * THUMB_MAX_SCALE)) + THUMB_GUTTER_W + SIDEBAR_CHROME_W
+
+    def _target_thumb_size(self) -> QSize:
+        viewport_w = self._list.viewport().width()
+        if viewport_w <= 0:
+            viewport_w = self._list.width()
+        available_w = max(THUMB_W, viewport_w - THUMB_GUTTER_W)
+        target_w = min(int(round(THUMB_W * THUMB_MAX_SCALE)), available_w)
+        target_h = int(round(THUMB_H * (target_w / THUMB_W)))
+        return QSize(target_w, target_h)
+
+    def _placeholder_icon(self) -> QIcon:
+        placeholder = QPixmap(self._thumb_size.width(), self._thumb_size.height())
+        placeholder.fill(QColor("white"))
+        return QIcon(placeholder)
+
+    def _icon_from_image(self, image: QImage) -> QIcon:
+        pixmap = QPixmap.fromImage(image)
+        screen = self.screen()
+        dpr = screen.devicePixelRatio() if screen else 1.0
+        target_w = int(max(self._thumb_size.width() - 4, 1) * dpr)
+        target_h = int(max(self._thumb_size.height() - 4, 1) * dpr)
+        scaled = pixmap.scaled(
+            target_w, target_h,
+            Qt.AspectRatioMode.KeepAspectRatio,
+            Qt.TransformationMode.SmoothTransformation,
+        )
+        scaled.setDevicePixelRatio(dpr)
+        return QIcon(scaled)
+
+    def _refresh_thumbnail_icons(self):
+        placeholder_icon = self._placeholder_icon()
+        for i in range(self._list.count()):
+            item = self._list.item(i)
+            if item is None:
+                continue
+            item.setSizeHint(QSize(self._thumb_size.width(), self._thumb_size.height() + THUMB_LABEL_H))
+            image = self._thumb_images.get(i)
+            item.setIcon(self._icon_from_image(image) if image is not None else placeholder_icon)
 
     def _update_layout(self):
         """Set grid size to center thumbnails within available width."""
@@ -359,8 +421,13 @@ class ThumbnailPanel(QWidget):
             viewport_w = self._list.width() - 2
         if viewport_w <= 0:
             return
+        thumb_size = self._target_thumb_size()
+        if thumb_size != self._thumb_size:
+            self._thumb_size = thumb_size
+            self._list.setIconSize(self._thumb_size)
+            self._refresh_thumbnail_icons()
         spacing = self._list.spacing()
-        item_h = THUMB_H + 20 + spacing
+        item_h = self._thumb_size.height() + THUMB_LABEL_H + spacing
         # Force single column, centered within viewport
         self._list.setGridSize(QSize(viewport_w, item_h))
 
@@ -368,6 +435,7 @@ class ThumbnailPanel(QWidget):
                       file_path: str = "", doc_bytes: Optional[bytes] = None):
         self._list.clear()
         self._list.set_doc(doc)
+        self._thumb_images.clear()
 
         for w in self._workers:
             w.cancel()
@@ -384,14 +452,13 @@ class ThumbnailPanel(QWidget):
         if not doc:
             return
 
-        placeholder = QPixmap(THUMB_W, THUMB_H)
-        placeholder.fill(QColor("white"))
-        placeholder_icon = QIcon(placeholder)
+        self._update_layout()
+        placeholder_icon = self._placeholder_icon()
 
         for i in range(doc.page_count):
             bm = "★ " if i in bookmarks else ""
             item = QListWidgetItem(placeholder_icon, f"{bm}{i + 1}")
-            item.setSizeHint(QSize(THUMB_W, THUMB_H + 20))
+            item.setSizeHint(QSize(self._thumb_size.width(), self._thumb_size.height() + THUMB_LABEL_H))
             item.setTextAlignment(Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignBottom)
             self._list.addItem(item)
 
@@ -411,7 +478,7 @@ class ThumbnailPanel(QWidget):
             if len(indices) >= doc.page_count:
                 break
 
-        worker = ThumbnailWorker(self._file_path, indices, size=THUMB_W * 6,
+        worker = ThumbnailWorker(self._file_path, indices, size=int(round(THUMB_W * THUMB_MAX_SCALE * 6)),
                                  doc_bytes=self._doc_bytes)
         worker.done.connect(self._on_thumbnail_done)
         self._workers.append(worker)
@@ -420,18 +487,8 @@ class ThumbnailPanel(QWidget):
     def _on_thumbnail_done(self, page_index: int, image: QImage):
         if image.isNull() or page_index >= self._list.count():
             return
-        pixmap = QPixmap.fromImage(image)
-        screen = self.screen()
-        dpr = screen.devicePixelRatio() if screen else 1.0
-        target_w = int((THUMB_W - 4) * dpr)
-        target_h = int((THUMB_H - 4) * dpr)
-        scaled = pixmap.scaled(
-            target_w, target_h,
-            Qt.AspectRatioMode.KeepAspectRatio,
-            Qt.TransformationMode.SmoothTransformation,
-        )
-        scaled.setDevicePixelRatio(dpr)
-        self._list.item(page_index).setIcon(QIcon(scaled))
+        self._thumb_images[page_index] = image
+        self._list.item(page_index).setIcon(self._icon_from_image(image))
 
     def set_current_page(self, page: int):
         if self._current_page == page:
@@ -779,8 +836,8 @@ class SidebarWidget(QWidget):
 
     def __init__(self, bookmark_mgr: BookmarkManager, parent=None):
         super().__init__(parent)
-        self.setMinimumWidth(240)
-        self.setMaximumWidth(320)
+        self.setMinimumWidth(ThumbnailPanel.preferred_sidebar_width())
+        self.setMaximumWidth(ThumbnailPanel.maximum_sidebar_width())
         self._bookmark_mgr = bookmark_mgr
         self._file_path: str = ""
         self._doc: Optional[fitz.Document] = None
@@ -850,6 +907,12 @@ class SidebarWidget(QWidget):
         self._set_panel_index(0)
 
         self._bookmark_mgr.bookmarks_changed.connect(self._refresh_bookmarks)
+
+    def preferred_sidebar_width(self) -> int:
+        return ThumbnailPanel.preferred_sidebar_width()
+
+    def maximum_sidebar_width(self) -> int:
+        return ThumbnailPanel.maximum_sidebar_width()
 
     def load_document(self, doc: Optional[fitz.Document], file_path: str = "",
                       doc_bytes: Optional[bytes] = None):

@@ -461,7 +461,12 @@ class MainWindow(QMainWindow):
         tb_layout = QHBoxLayout(self._top_tools_widget)
         tb_layout.setContentsMargins(14, 8, 14, 8)
         tb_layout.setSpacing(8)
-        
+
+        self._sidebar_toggle_btn = make_tool_button("", "왼쪽 패널 숨기기", "panel-left-close")
+        self._sidebar_toggle_btn.clicked.connect(self._toggle_sidebar)
+        tb_layout.addWidget(self._sidebar_toggle_btn)
+        tb_layout.addWidget(make_divider())
+
         # File ops
         open_btn = make_tool_button("📂", "열기 (Ctrl+O)", "folder-open")
         open_btn.clicked.connect(self._open_file)
@@ -674,7 +679,8 @@ class MainWindow(QMainWindow):
         self._right_panel_hl.setSpacing(0)
 
         self._splitter.addWidget(self._right_panel_container)
-        self._splitter.setSizes([260, 920, 0])
+        self._sidebar_last_visible_width = self._sidebar.preferred_sidebar_width()
+        self._apply_workspace_splitter_sizes(self._sidebar_last_visible_width)
         content_hl.addWidget(self._splitter)
 
         right_vl.addWidget(content_area, 1)
@@ -698,6 +704,7 @@ class MainWindow(QMainWindow):
 
     def _connect_signals(self):
         self._tab_bar.currentChanged.connect(self._on_tab_changed)
+        self._splitter.splitterMoved.connect(self._on_splitter_moved)
 
         # Keyboard shortcuts
         QShortcut(QKeySequence("Ctrl+O"), self).activated.connect(self._open_file)
@@ -1872,15 +1879,66 @@ class MainWindow(QMainWindow):
 
     # ── Sidebar ───────────────────────────────
 
-    def _toggle_sidebar(self):
-        self._sidebar_visible = not self._sidebar_visible
-        self._sidebar.setVisible(self._sidebar_visible)
+    def _clamp_sidebar_width(self, width: int) -> int:
+        return max(
+            self._sidebar.minimumWidth(),
+            min(self._sidebar.maximum_sidebar_width(), width),
+        )
+
+    def _apply_workspace_splitter_sizes(self, left_width: int | None = None):
         sizes = self._splitter.sizes()
         total = sum(sizes)
+        if total <= 0:
+            total = max(self._splitter.width(), self.width(), 1)
+        right_w = sizes[2] if len(sizes) > 2 else 0
+
         if self._sidebar_visible:
-            self._splitter.setSizes([220, total - 220])
+            requested_left = left_width if left_width and left_width > 0 else (
+                sizes[0] or self._sidebar_last_visible_width or self._sidebar.preferred_sidebar_width()
+            )
+            left_w = self._clamp_sidebar_width(requested_left)
+            self._sidebar_last_visible_width = left_w
+            self._sidebar.show()
         else:
-            self._splitter.setSizes([0, total])
+            left_w = 0
+            self._sidebar.hide()
+
+        center_w = max(100, total - left_w - right_w)
+        self._splitter.setSizes([left_w, center_w, right_w])
+        self._update_sidebar_toggle_button()
+
+    def _update_sidebar_toggle_button(self):
+        if not hasattr(self, "_sidebar_toggle_btn"):
+            return
+        if self._sidebar_visible:
+            self._sidebar_toggle_btn.setIcon(svg_icon("panel-left-close", 18))
+            self._sidebar_toggle_btn.setToolTip("왼쪽 패널 숨기기")
+        else:
+            self._sidebar_toggle_btn.setIcon(svg_icon("panel-left-open", 18))
+            self._sidebar_toggle_btn.setToolTip("왼쪽 패널 보이기")
+
+    def _on_splitter_moved(self, _pos: int, _index: int):
+        if not self._sidebar_visible:
+            return
+        sizes = self._splitter.sizes()
+        if not sizes:
+            return
+        clamped_left = self._clamp_sidebar_width(sizes[0])
+        self._sidebar_last_visible_width = clamped_left
+        if clamped_left != sizes[0]:
+            QTimer.singleShot(0, lambda w=clamped_left: self._apply_workspace_splitter_sizes(w))
+
+    def _toggle_sidebar(self):
+        if self._sidebar_visible:
+            sizes = self._splitter.sizes()
+            if sizes and sizes[0] > 0:
+                self._sidebar_last_visible_width = self._clamp_sidebar_width(sizes[0])
+            self._sidebar_visible = False
+            self._apply_workspace_splitter_sizes(0)
+            return
+
+        self._sidebar_visible = True
+        self._apply_workspace_splitter_sizes(self._sidebar_last_visible_width)
 
     # ── Helpers ───────────────────────────────
 
@@ -2020,6 +2078,11 @@ class MainWindow(QMainWindow):
                 self._splitter.setSizes([int(s) for s in splitter_sizes])
             except (TypeError, ValueError):
                 pass
+        sizes = self._splitter.sizes()
+        self._sidebar_visible = bool(sizes and sizes[0] > 0)
+        if self._sidebar_visible:
+            self._sidebar_last_visible_width = self._clamp_sidebar_width(sizes[0])
+        self._apply_workspace_splitter_sizes(self._sidebar_last_visible_width)
 
     def _save_window_state(self):
         """Save window geometry and splitter sizes to QSettings."""

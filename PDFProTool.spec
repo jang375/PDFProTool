@@ -57,7 +57,7 @@ a = Analysis(
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=['torchaudio', 'pandas', 'matplotlib', 'sklearn', 'scikit-learn', 'tensorflow', 'keras', 'transformers', 'sympy', 'IPython', 'notebook', 'jupyter', 'pytest', 'setuptools', 'pip', 'wheel', 'tkinter', '_tkinter', 'tcl', 'tk'],
+    excludes=['torchaudio', 'pandas', 'matplotlib', 'sklearn', 'scikit-learn', 'tensorflow', 'keras', 'transformers', 'IPython', 'notebook', 'jupyter', 'pytest', 'setuptools', 'pip', 'wheel', 'tkinter', '_tkinter', 'tcl', 'tk'],
     noarchive=False,
     optimize=0,
 )

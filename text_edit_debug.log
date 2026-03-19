@@ -1,0 +1,515 @@
+2026-02-26 13:21:31,980  old='2.94%Risk-free interest rate for 10 Year Korea government bond (as of 2024/9/30) from Bloomberg'  new='2.94%Risk-free interest rate for 10 Year Korea government bond (as of 2025/9/30) from Bloomberg'  same=False
+2026-02-26 13:21:31,983  EXCEPTION: too many values to unpack (expected 6, got 7)
+Traceback (most recent call last):
+  File "C:\Users\jang3\회계법인 Dropbox\장성남\PC\Documents\0.python\PDFProTool\pdf_viewer.py", line 1929, in _commit_text_edit
+    font_kwargs = self._extract_embedded_font(page, line_info["font"])
+  File "C:\Users\jang3\회계법인 Dropbox\장성남\PC\Documents\0.python\PDFProTool\pdf_viewer.py", line 2162, in _extract_embedded_font
+    for xref, _ext, _ftype, fname, sname, _encoding in fonts:
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: too many values to unpack (expected 6, got 7)
+
+2026-02-26 13:21:32,173  snapshot changed=True  has_bytes=True  edit_ok=False
+2026-02-26 13:21:37,506  old='2.94%Risk-free interest rate for 10 Year Korea government bond (as of 2024/9/30) from Bloomberg'  new='2.94%Risk-free interest rate for 10 Year Korea government bond (as of 2025/9/30) from Bloomberg'  same=False
+2026-02-26 13:21:37,508  EXCEPTION: too many values to unpack (expected 6, got 7)
+Traceback (most recent call last):
+  File "C:\Users\jang3\회계법인 Dropbox\장성남\PC\Documents\0.python\PDFProTool\pdf_viewer.py", line 1929, in _commit_text_edit
+    font_kwargs = self._extract_embedded_font(page, line_info["font"])
+  File "C:\Users\jang3\회계법인 Dropbox\장성남\PC\Documents\0.python\PDFProTool\pdf_viewer.py", line 2162, in _extract_embedded_font
+    for xref, _ext, _ftype, fname, sname, _encoding in fonts:
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: too many values to unpack (expected 6, got 7)
+
+2026-02-26 13:21:37,688  snapshot changed=True  has_bytes=True  edit_ok=False
+2026-02-26 13:25:25,981  old='2.94%Risk-free interest rate for 10 Year Korea government bond (as of 2024/9/30) from Bloomberg'  new='2.94%Risk-free interest rate for 10 Year Korea government bond (as of 2025/9/30) from Bloomberg'  same=False
+2026-02-26 13:25:25,982  font='MalgunGothic'  kwargs={'fontname': 'arial', 'fontfile': 'C:\\WINDOWS\\Fonts\\arial.ttf'}
+2026-02-26 13:25:25,982  bg_color=(0.4, 0.6901960784313725, 0.7372549019607844)  bbox=Rect(252.16220092773438, 243.10414123535156, 616.1690673828125, 252.58331298828125)
+2026-02-26 13:25:25,983  draw_rect OK
+2026-02-26 13:25:25,988  insert_text OK  rc=1  point=Point(252.16220092773438, 250.58938598632812)
+2026-02-26 13:25:26,208  snapshot changed=True  has_bytes=True  edit_ok=True
+2026-02-26 13:33:39,845  old='2.94%Risk-free interest rate for 10 Year Korea government bond (as of 2024/9/30) from Bloomberg'  new='2.94%Risk-free interest rate for 10 Year Korea government bond (as of 2025/9/30) from Bloomberg'  same=False
+2026-02-26 13:33:39,846  font='MalgunGothic'  kwargs={'fontname': 'malgun', 'fontfile': 'C:\\WINDOWS\\Fonts\\malgun.ttf'}
+2026-02-26 13:33:39,848  apply_redactions OK
+2026-02-26 13:33:39,886  insert_text OK  rc=1  point=Point(252.16220092773438, 250.58938598632812)
+2026-02-26 13:33:40,455  snapshot changed=True  has_bytes=True  edit_ok=True
+2026-02-26 17:56:32,048  old='2.94%Risk-free interest rate for 10 Year Korea government bond (as of 2024/9/30) from Bloomberg'  new='2.94%Risk-free interest rate for 10 Year Korea government bond (as of 2025/9/30) from Bloomberg'  same=False
+2026-02-26 17:56:32,049  font='MalgunGothic'  kwargs={'fontname': 'malgun', 'fontfile': 'C:\\WINDOWS\\Fonts\\malgun.ttf'}
+2026-02-26 17:56:32,051  apply_redactions OK
+2026-02-26 17:56:32,092  insert_text OK  rc=1  point=Point(252.16220092773438, 250.58938598632812)
+2026-02-26 17:56:32,643  snapshot changed=True  has_bytes=True  edit_ok=True
+2026-02-26 19:24:10,435  old='본 보고서상 손상검토의 대상이 된 현금창출단위(Cash-Generating Unit : CGU)는 귀사와 협의된 바에 따라 귀사'  new='본 보고디상 손상검토의 대상이 된 현금창출단위(Cash-Generating Unit : CGU)는 귀사와 협의된 바에 따라 귀사'  same=False
+2026-02-26 19:24:10,436  font='MalgunGothic'  kwargs={'fontname': 'malgun', 'fontfile': 'C:\\WINDOWS\\Fonts\\malgun.ttf'}
+2026-02-26 19:24:10,438  apply_redactions OK
+2026-02-26 19:24:10,514  insert_text OK  rc=1  point=Point(195.90576171875, 272.10986328125)
+2026-02-26 19:24:11,072  snapshot changed=True  has_bytes=True  edit_ok=True
+2026-02-26 19:24:13,738  old='본 보고디상 손상검토의 대상이 된 현금창출단위(Cash-Generating Unit : CGU)는 귀사와 협의된 바에 따라 귀사'  new='본 보고디상 손상검토의 대상이 된 현금창출단위(Cash-Generating Unit : CGU)는 귀사와 협의된 바에 따라 귀사'  same=True
+2026-02-26 19:24:13,738  SKIP — no change or empty
+2026-02-26 19:24:14,629  old='및 회사가 제시한 과거 실적, 미래사업계획, 공시자료 및 기타 외부기관의 시장전망 자료 등에 의존하여 업무를 수'  new='및 회사가 제시한 과거 실적, 미래사업계획, 공시자료 및 기타 외부기관의 시장전망 자료 등에 의존하여 업무를 수'  same=True
+2026-02-26 19:24:14,629  SKIP — no change or empty
+2026-03-05 18:38:27,416  old='쌍용어린이집'  new='쌍양어린이집'  same=False
+2026-03-05 18:38:27,417  font='\x14Õ´'  kwargs={'fontname': 'malgun', 'fontfile': 'C:\\WINDOWS\\Fonts\\malgun.ttf'}
+2026-03-05 18:38:27,424  apply_redactions OK
+2026-03-05 18:38:27,499  insert_text OK  rc=1  point=Point(167.23199462890625, 141.78900146484375)
+2026-03-05 18:38:27,887  snapshot changed=True  has_bytes=True  edit_ok=True
+2026-03-05 18:38:42,030  old='쌍용어린이집'  new='쌍아어린이집'  same=False
+2026-03-05 18:38:42,031  font='\x14Õ´'  kwargs={'fontname': 'malgun', 'fontfile': 'C:\\WINDOWS\\Fonts\\malgun.ttf'}
+2026-03-05 18:38:42,039  apply_redactions OK
+2026-03-05 18:38:42,041  insert_text OK  rc=1  point=Point(196.96400451660156, 232.65203857421875)
+2026-03-05 18:38:42,431  snapshot changed=True  has_bytes=True  edit_ok=True
+2026-03-05 18:41:25,228  old='쌍용어린이집'  new='쌍양어린이집'  same=False
+2026-03-05 18:41:25,230  corrupted font name, trying basefont='F1'
+2026-03-05 18:41:25,230  font='\x14Õ´'  kwargs={'fontname': 'malgun', 'fontfile': 'C:\\WINDOWS\\Fonts\\malgun.ttf'}
+2026-03-05 18:41:25,238  apply_redactions OK
+2026-03-05 18:41:25,316  insert_text OK  rc=1  point=Point(167.23199462890625, 141.78900146484375)
+2026-03-05 18:41:25,707  snapshot changed=True  has_bytes=True  edit_ok=True
+2026-03-05 18:41:29,360  old='쌍양어린이집'  new='쌍양어린이집'  same=True
+2026-03-05 18:41:29,360  SKIP — no change or empty
+2026-03-05 18:46:18,833  old='쌍용어린이집'  new='쌍용가린이집'  same=False
+2026-03-05 18:46:18,834  extract_font xref=697: basename='DEVEXP+ËÀ´' ext='ttf' fname='DEVEXP+ËÀ´' sname='F1' real_name='ËÀ´' content_len=386324
+2026-03-05 18:46:18,836  using extracted font: C:\Users\jang3\AppData\Local\Temp\pdfpro_font_8cxcqgdn.ttf
+2026-03-05 18:46:18,836  font='\x14Õ´'  kwargs={'fontname': 'ËÀ´', 'fontfile': 'C:\\Users\\jang3\\AppData\\Local\\Temp\\pdfpro_font_8cxcqgdn.ttf'}
+2026-03-05 18:46:18,844  apply_redactions OK
+2026-03-05 18:46:18,894  insert_text OK  rc=1  point=Point(196.96400451660156, 232.65203857421875)
+2026-03-05 18:46:18,923  snapshot changed=True  has_bytes=True  edit_ok=True
+2026-03-05 18:46:20,881  old='\x00\x00\x00\x00\x00\x00'  new='\x00\x00\x00\x00\x00\x00'  same=True
+2026-03-05 18:46:20,881  SKIP — no change or empty
+2026-03-05 18:51:19,141  old='쌍용어린이집'  new='쌍용가린이집'  same=False
+2026-03-05 18:51:19,143  extract_font xref=697: basename='DEVEXP+ËÀ´' fname='DEVEXP+ËÀ´' sname='F1' real_family='ËÀ´' content_len=386324
+2026-03-05 18:51:19,144  matched system font: {'fontname': 'malgun', 'fontfile': 'C:\\WINDOWS\\Fonts\\malgun.ttf'}
+2026-03-05 18:51:19,144  font='\x14Õ´'  kwargs={'fontname': 'malgun', 'fontfile': 'C:\\WINDOWS\\Fonts\\malgun.ttf'}
+2026-03-05 18:51:19,152  apply_redactions OK
+2026-03-05 18:51:19,229  insert_text OK  rc=1  point=Point(196.96400451660156, 232.65203857421875)
+2026-03-05 18:51:19,619  snapshot changed=True  has_bytes=True  edit_ok=True
+2026-03-05 19:09:44,262  old='쌍용어린이집'  new='쌍용가린이집'  same=False
+2026-03-05 19:09:44,263  extract_font xref=697: basename='DEVEXP+ËÀ´' fname='DEVEXP+ËÀ´' sname='F1' real_family='ËÀ´' content_len=386324
+2026-03-05 19:09:44,264  matched system font: {'fontname': 'malgun', 'fontfile': 'C:\\WINDOWS\\Fonts\\malgun.ttf'}
+2026-03-05 19:09:44,264  font='\x14Õ´' flags=4 kwargs={'fontname': 'malgun', 'fontfile': 'C:\\WINDOWS\\Fonts\\malgun.ttf'}
+2026-03-05 19:09:44,272  apply_redactions OK
+2026-03-05 19:09:44,348  insert_text OK  rc=1  point=Point(167.23199462890625, 141.78900146484375)
+2026-03-05 19:09:44,744  snapshot changed=True  has_bytes=True  edit_ok=True
+2026-03-05 19:10:31,787  old='쌍용어린이집'  new='쌍용어가린이집'  same=False
+2026-03-05 19:10:31,788  extract_font xref=697: basename='DEVEXP+ËÀ´' fname='DEVEXP+ËÀ´' sname='F1' real_family='ËÀ´' content_len=386324
+2026-03-05 19:10:31,788  matched system font: {'fontname': 'malgun', 'fontfile': 'C:\\WINDOWS\\Fonts\\malgun.ttf'}
+2026-03-05 19:10:31,789  font='\x14Õ´' flags=4 kwargs={'fontname': 'malgun', 'fontfile': 'C:\\WINDOWS\\Fonts\\malgun.ttf'}
+2026-03-05 19:10:31,796  apply_redactions OK
+2026-03-05 19:10:31,873  insert_text OK  rc=1  point=Point(167.23199462890625, 141.78900146484375)
+2026-03-05 19:10:32,261  snapshot changed=True  has_bytes=True  edit_ok=True
+2026-03-05 19:14:12,393  old='쌍용어린이집'  new='쌍용가린이집'  same=False
+2026-03-05 19:14:12,395  extract_font xref=697: basename='DEVEXP+ËÀ´' fname='DEVEXP+ËÀ´' sname='F1' real_family='ËÀ´' content_len=386324
+2026-03-05 19:14:12,395  matched system font: {'fontname': 'malgun', 'fontfile': 'C:\\WINDOWS\\Fonts\\malgun.ttf'}
+2026-03-05 19:14:12,395  font='\x14Õ´' flags=4 kwargs={'fontname': 'malgun', 'fontfile': 'C:\\WINDOWS\\Fonts\\malgun.ttf'}
+2026-03-05 19:14:12,403  apply_redactions OK
+2026-03-05 19:14:12,484  insert_text OK  rc=1  point=Point(196.96400451660156, 232.65203857421875)
+2026-03-05 19:14:12,879  snapshot changed=True  has_bytes=True  edit_ok=True
+2026-03-06 11:23:26,434  old='쌍용어린이집'  new='쌍양어린이집'  same=False
+2026-03-06 11:23:26,436  extract_font xref=697: basename='DEVEXP+ËÀ´' fname='DEVEXP+ËÀ´' sname='F1' real_family='ËÀ´' content_len=386324
+2026-03-06 11:23:26,436  matched system font: {'fontname': 'batang', 'fontfile': 'C:\\WINDOWS\\Fonts\\batang.ttc'}
+2026-03-06 11:23:26,436  font='\x14Õ´' flags=4 kwargs={'fontname': 'batang', 'fontfile': 'C:\\WINDOWS\\Fonts\\batang.ttc'}
+2026-03-06 11:23:26,444  apply_redactions OK
+2026-03-06 11:23:26,603  insert_text OK  rc=1  point=Point(196.96400451660156, 232.65203857421875)
+2026-03-06 11:23:27,062  snapshot changed=True  has_bytes=True  edit_ok=True
+2026-03-06 11:23:46,163  old='①법인명(상호)'  new='①법안명(상호)'  same=False
+2026-03-06 11:23:46,164  font='ËÀ´' flags=4 kwargs={'fontname': 'batang', 'fontfile': 'C:\\WINDOWS\\Fonts\\batang.ttc'}
+2026-03-06 11:23:46,230  apply_redactions OK
+2026-03-06 11:23:46,436  insert_text OK  rc=1  point=Point(82.99199676513672, 141.78900146484375)
+2026-03-06 11:23:46,468  snapshot changed=True  has_bytes=True  edit_ok=True
+2026-03-06 11:29:37,756  old='국민연금보험료'  new='국민연금부험료'  same=False
+2026-03-06 11:29:37,757  font='ËÀ´' flags=4 kwargs={'fontname': 'batang', 'fontfile': 'C:\\WINDOWS\\Fonts\\batang.ttc'}
+2026-03-06 11:29:37,767  apply_redactions OK
+2026-03-06 11:29:37,926  insert_text OK  rc=1  point=Point(76.91999816894531, 192.79205322265625)
+2026-03-06 11:29:38,405  snapshot changed=True  has_bytes=True  edit_ok=True
+2026-03-06 11:30:01,154  old='㉮공무원연금'  new='㉮공마원연금'  same=False
+2026-03-06 11:30:01,155  font='ËÀ´' flags=4 kwargs={'fontname': 'batang', 'fontfile': 'C:\\WINDOWS\\Fonts\\batang.ttc'}
+2026-03-06 11:30:01,164  apply_redactions OK
+2026-03-06 11:30:01,167  insert_text OK  rc=1  point=Point(95.95700073242188, 219.9090576171875)
+2026-03-06 11:30:01,646  snapshot changed=True  has_bytes=True  edit_ok=True
+2026-03-06 11:35:03,896  old='쌍양어린이집'  new='쌍양아린이집'  same=False
+2026-03-06 11:35:03,897  font='Batang' flags=4 kwargs={'fontname': 'batang', 'fontfile': 'C:\\WINDOWS\\Fonts\\batang.ttc'}
+2026-03-06 11:35:03,905  apply_redactions OK
+2026-03-06 11:35:04,108  insert_text OK  rc=1  point=Point(196.96400451660156, 232.65203857421875)
+2026-03-06 11:35:04,142  snapshot changed=True  has_bytes=True  edit_ok=True
+2026-03-06 11:35:11,506  old='㉮공무원연금'  new='㉮공마원연금'  same=False
+2026-03-06 11:35:11,507  font='ËÀ´' flags=4 kwargs={'fontname': 'malgun', 'fontfile': 'C:\\WINDOWS\\Fonts\\malgun.ttf'}
+2026-03-06 11:35:11,516  apply_redactions OK
+2026-03-06 11:35:11,591  insert_text OK  rc=1  point=Point(95.95700073242188, 219.9090576171875)
+2026-03-06 11:35:11,994  snapshot changed=True  has_bytes=True  edit_ok=True
+2026-03-06 12:52:15,369  old='㉮공무원연금'  new='㉮공마원연금'  same=False
+2026-03-06 12:52:15,370  font='ËÀ´' flags=4 kwargs={'fontname': 'malgun', 'fontfile': 'C:\\WINDOWS\\Fonts\\malgun.ttf'}
+2026-03-06 12:52:15,382  apply_redactions OK
+2026-03-06 12:52:15,467  insert_text OK  rc=1  point=Point(95.95700073242188, 219.9090576171875)
+2026-03-06 12:52:15,877  snapshot changed=True  has_bytes=True  edit_ok=True
+2026-03-06 12:53:04,807  old='㉮공무원연금'  new='㉮공마원연금'  same=False
+2026-03-06 12:53:04,808  font='ËÀ´' flags=4 kwargs={'fontname': 'malgun', 'fontfile': 'C:\\WINDOWS\\Fonts\\malgun.ttf'}
+2026-03-06 12:53:04,818  apply_redactions OK
+2026-03-06 12:53:04,897  insert_text OK  rc=1  point=Point(95.95700073242188, 219.9090576171875)
+2026-03-06 12:53:05,311  snapshot changed=True  has_bytes=True  edit_ok=True
+2026-03-10 10:46:52,365  old='쌍용어린이집'  new='쌍양어린이집'  same=False
+2026-03-10 10:46:52,373  extract_font xref=697: basename='DEVEXP+ËÀ´' fname='DEVEXP+ËÀ´' sname='F1' real_family=None content_len=386324
+2026-03-10 10:46:52,379  extract_font xref=702: basename='DEVEXP+\x14Õ´' fname='DEVEXP+\x14Õ´' sname='F2' real_family=None content_len=367124
+2026-03-10 10:46:52,385  extract_font xref=707: basename='DEVEXP+ËÀ´,Bold' fname='DEVEXP+ËÀ´,Bold' sname='F3' real_family='ËÀ´,Bold' content_len=344996
+2026-03-10 10:46:52,385  matched system font: {'fontname': 'malgunbd', 'fontfile': 'C:\\WINDOWS\\Fonts\\malgunbd.ttf'}
+2026-03-10 10:46:52,385  font='\x14Õ´' flags=4 kwargs={'fontname': 'malgunbd', 'fontfile': 'C:\\WINDOWS\\Fonts\\malgunbd.ttf'}
+2026-03-10 10:46:52,393  apply_redactions OK
+2026-03-10 10:46:52,469  insert_text OK  rc=1  point=Point(196.96400451660156, 232.65203857421875)
+2026-03-10 10:46:52,838  snapshot changed=True  has_bytes=True  edit_ok=True
+2026-03-10 10:47:33,060  old='쌍용어린이집'  new='쌍양어린이집'  same=False
+2026-03-10 10:47:33,062  extract_font xref=697: basename='DEVEXP+ËÀ´' fname='DEVEXP+ËÀ´' sname='F1' real_family=None content_len=386324
+2026-03-10 10:47:33,064  extract_font xref=702: basename='DEVEXP+\x14Õ´' fname='DEVEXP+\x14Õ´' sname='F2' real_family=None content_len=367124
+2026-03-10 10:47:33,065  extract_font xref=707: basename='DEVEXP+ËÀ´,Bold' fname='DEVEXP+ËÀ´,Bold' sname='F3' real_family='ËÀ´,Bold' content_len=344996
+2026-03-10 10:47:33,065  matched system font: {'fontname': 'malgunbd', 'fontfile': 'C:\\WINDOWS\\Fonts\\malgunbd.ttf'}
+2026-03-10 10:47:33,065  font='\x14Õ´' flags=4 kwargs={'fontname': 'malgunbd', 'fontfile': 'C:\\WINDOWS\\Fonts\\malgunbd.ttf'}
+2026-03-10 10:47:33,073  apply_redactions OK
+2026-03-10 10:47:33,148  insert_text OK  rc=1  point=Point(196.96400451660156, 232.65203857421875)
+2026-03-10 10:47:33,521  snapshot changed=True  has_bytes=True  edit_ok=True
+2026-03-10 11:08:48,528  old='쌍용어린이집'  new='쌍양어린이집'  same=False
+2026-03-10 11:08:48,531  extract_font xref=697: basename='DEVEXP+ËÀ´' fname='DEVEXP+ËÀ´' sname='F1' real_family=None content_len=386324
+2026-03-10 11:08:48,532  extract_font xref=702: basename='DEVEXP+\x14Õ´' fname='DEVEXP+\x14Õ´' sname='F2' real_family=None content_len=367124
+2026-03-10 11:08:48,533  extract_font xref=707: basename='DEVEXP+ËÀ´,Bold' fname='DEVEXP+ËÀ´,Bold' sname='F3' real_family='ËÀ´,Bold' content_len=344996
+2026-03-10 11:08:48,534  matched system font: {'fontname': 'malgun', 'fontfile': 'C:\\WINDOWS\\Fonts\\malgun.ttf'}
+2026-03-10 11:08:48,534  font='\x14Õ´' flags=4 kwargs={'fontname': 'malgun', 'fontfile': 'C:\\WINDOWS\\Fonts\\malgun.ttf'}
+2026-03-10 11:08:48,542  apply_redactions OK
+2026-03-10 11:08:48,620  insert_text OK  rc=1  point=Point(196.96400451660156, 232.65203857421875)
+2026-03-10 11:08:49,016  snapshot changed=True  has_bytes=True  edit_ok=True
+2026-03-10 11:21:41,664  old='쌍용어린이집'  new='쌍양어린이집'  same=False
+2026-03-10 11:21:41,666  extract_font xref=697: basename='DEVEXP+ËÀ´' fname='DEVEXP+ËÀ´' sname='F1' real_family=None content_len=386324
+2026-03-10 11:21:41,668  extract_font xref=702: basename='DEVEXP+\x14Õ´' fname='DEVEXP+\x14Õ´' sname='F2' real_family=None content_len=367124
+2026-03-10 11:21:41,669  extract_font xref=707: basename='DEVEXP+ËÀ´,Bold' fname='DEVEXP+ËÀ´,Bold' sname='F3' real_family='ËÀ´,Bold' content_len=344996
+2026-03-10 11:21:41,669  matched system font: {'fontname': 'batang', 'fontfile': 'C:\\WINDOWS\\Fonts\\batang.ttc'}
+2026-03-10 11:21:41,669  font='\x14Õ´' flags=4 kwargs={'fontname': 'batang', 'fontfile': 'C:\\WINDOWS\\Fonts\\batang.ttc'}
+2026-03-10 11:21:41,678  apply_redactions OK
+2026-03-10 11:21:41,835  insert_text OK  rc=1  point=Point(196.96400451660156, 232.65203857421875)
+2026-03-10 11:21:42,306  snapshot changed=True  has_bytes=True  edit_ok=True
+2026-03-10 11:22:04,444  old='취학: 초·중등교육법상의 학교 중 고등학교 이상 및 고등교육법상의 학교에의 취학으로 다른'  new='취학: 초·중당교육법상의 학교 중 고등학교 이상 및 고등교육법상의 학교에의 취학으로 다른'  same=False
+2026-03-10 11:22:04,445  font='MalgunGothic-Semilight' flags=0 kwargs={'fontname': 'malgun', 'fontfile': 'C:\\WINDOWS\\Fonts\\malgun.ttf'}
+2026-03-10 11:22:04,448  apply_redactions OK
+2026-03-10 11:22:04,526  insert_text OK  rc=1  point=Point(100.92510223388672, 421.21759033203125)
+2026-03-10 11:22:04,898  snapshot changed=True  has_bytes=True  edit_ok=True
+2026-03-10 11:22:46,577  old='쌍용어린이집'  new='쌍양어린이집'  same=False
+2026-03-10 11:22:46,580  extract_font xref=697: basename='DEVEXP+ËÀ´' fname='DEVEXP+ËÀ´' sname='F1' real_family=None content_len=386324
+2026-03-10 11:22:46,582  extract_font xref=702: basename='DEVEXP+\x14Õ´' fname='DEVEXP+\x14Õ´' sname='F2' real_family=None content_len=367124
+2026-03-10 11:22:46,584  extract_font xref=707: basename='DEVEXP+ËÀ´,Bold' fname='DEVEXP+ËÀ´,Bold' sname='F3' real_family='ËÀ´,Bold' content_len=344996
+2026-03-10 11:22:46,584  matched system font: {'fontname': 'batang', 'fontfile': 'C:\\WINDOWS\\Fonts\\batang.ttc'}
+2026-03-10 11:22:46,584  font='\x14Õ´' flags=4 kwargs={'fontname': 'batang', 'fontfile': 'C:\\WINDOWS\\Fonts\\batang.ttc'}
+2026-03-10 11:22:46,592  apply_redactions OK
+2026-03-10 11:22:46,760  insert_text OK  rc=1  point=Point(196.96400451660156, 232.65203857421875)
+2026-03-10 11:22:47,234  snapshot changed=True  has_bytes=True  edit_ok=True
+2026-03-10 11:23:21,049  old='취학: 초·중등교육법상의 학교 중 고등학교 이상 및 고등교육법상의 학교에의 취학으로 다른'  new='취학: 초·중등교육법상의 학구 중 고등학교 이상 및 고등교육법상의 학교에의 취학으로 다른'  same=False
+2026-03-10 11:23:21,050  font='MalgunGothic-Semilight' flags=0 kwargs={'fontname': 'malgun', 'fontfile': 'C:\\WINDOWS\\Fonts\\malgun.ttf'}
+2026-03-10 11:23:21,053  apply_redactions OK
+2026-03-10 11:23:21,130  insert_text OK  rc=1  point=Point(100.92510223388672, 421.21759033203125)
+2026-03-10 11:23:21,499  snapshot changed=True  has_bytes=True  edit_ok=True
+2026-03-10 12:27:07,774  old='쌍용어린이집'  new='쌍양어린이집'  same=False
+2026-03-10 12:27:07,777  extract_font xref=697: basename='DEVEXP+ËÀ´' fname='DEVEXP+ËÀ´' sname='F1' real_family=None content_len=386324
+2026-03-10 12:27:07,778  extract_font xref=702: basename='DEVEXP+\x14Õ´' fname='DEVEXP+\x14Õ´' sname='F2' real_family=None content_len=367124
+2026-03-10 12:27:07,779  extract_font xref=707: basename='DEVEXP+ËÀ´,Bold' fname='DEVEXP+ËÀ´,Bold' sname='F3' real_family='ËÀ´,Bold' content_len=344996
+2026-03-10 12:27:07,780  matched system font: {'fontname': 'batang', 'fontfile': 'C:\\WINDOWS\\Fonts\\batang.ttc'}
+2026-03-10 12:27:07,780  font='\x14Õ´' flags=4 kwargs={'fontname': 'batang', 'fontfile': 'C:\\WINDOWS\\Fonts\\batang.ttc'}
+2026-03-10 12:27:07,787  apply_redactions OK
+2026-03-10 12:27:07,944  insert_text OK  rc=1  point=Point(196.96400451660156, 232.65203857421875)
+2026-03-10 12:27:08,414  snapshot changed=True  has_bytes=True  edit_ok=True
+2026-03-10 12:27:23,888  old='취학: 초·중등교육법상의 학교 중 고등학교 이상 및 고등교육법상의 학교에의 취학으로 다른'  new='취학: 초·중등교육법상의 학가 중 고등학교 이상 및 고등교육법상의 학교에의 취학으로 다른'  same=False
+2026-03-10 12:27:23,889  font='MalgunGothic-Semilight' flags=0 kwargs={'fontname': 'malgunsl', 'fontfile': 'C:\\WINDOWS\\Fonts\\malgunsl.ttf'}
+2026-03-10 12:27:23,892  apply_redactions OK
+2026-03-10 12:27:23,948  insert_text OK  rc=1  point=Point(100.92510223388672, 421.21759033203125)
+2026-03-10 12:27:24,065  snapshot changed=True  has_bytes=True  edit_ok=True
+2026-03-10 12:34:13,093  old='쌍용어린이집'  new='쌍양어린이집'  same=False
+2026-03-10 12:34:13,096  extract_font xref=697: basename='DEVEXP+ËÀ´' fname='DEVEXP+ËÀ´' sname='F1' real_family=None content_len=386324
+2026-03-10 12:34:13,097  extract_font xref=702: basename='DEVEXP+\x14Õ´' fname='DEVEXP+\x14Õ´' sname='F2' real_family=None content_len=367124
+2026-03-10 12:34:13,099  extract_font xref=707: basename='DEVEXP+ËÀ´,Bold' fname='DEVEXP+ËÀ´,Bold' sname='F3' real_family='ËÀ´,Bold' content_len=344996
+2026-03-10 12:34:13,099  matched system font: {'fontname': 'batang', 'fontfile': 'C:\\WINDOWS\\Fonts\\batang.ttc'}
+2026-03-10 12:34:13,099  font='\x14Õ´' flags=4 kwargs={'fontname': 'batang', 'fontfile': 'C:\\WINDOWS\\Fonts\\batang.ttc'}
+2026-03-10 12:34:13,106  apply_redactions OK
+2026-03-10 12:34:13,260  insert_text OK  rc=1  point=Point(196.96400451660156, 232.65203857421875)
+2026-03-10 12:34:13,728  snapshot changed=True  has_bytes=True  edit_ok=True
+2026-03-10 13:48:31,518  old='쌍용어린이집'  new='쌍양어린이집'  same=False
+2026-03-10 13:48:31,520  extract_font xref=697: basename='DEVEXP+ËÀ´' fname='DEVEXP+ËÀ´' sname='F1' real_family=None content_len=386324
+2026-03-10 13:48:31,522  extract_font xref=702: basename='DEVEXP+\x14Õ´' fname='DEVEXP+\x14Õ´' sname='F2' real_family=None content_len=367124
+2026-03-10 13:48:31,523  extract_font xref=707: basename='DEVEXP+ËÀ´,Bold' fname='DEVEXP+ËÀ´,Bold' sname='F3' real_family='ËÀ´,Bold' content_len=344996
+2026-03-10 13:48:31,523  matched system font: {'fontname': 'batang', 'fontfile': 'C:\\WINDOWS\\Fonts\\batang.ttc'}
+2026-03-10 13:48:31,523  font='\x14Õ´' flags=4 kwargs={'fontname': 'batang', 'fontfile': 'C:\\WINDOWS\\Fonts\\batang.ttc'}
+2026-03-10 13:48:31,531  apply_redactions OK
+2026-03-10 13:48:31,699  insert_text OK  rc=1  point=Point(196.96400451660156, 232.65203857421875)
+2026-03-10 13:48:32,174  snapshot changed=True  has_bytes=True  edit_ok=True
+2026-03-10 13:48:44,833  old='취학: 초·중등교육법상의 학교 중 고등학교 이상 및 고등교육법상의 학교에의 취학으로 다른'  new='취학: 초·중등교육법상의 학가 중 고등학교 이상 및 고등교육법상의 학교에의 취학으로 다른'  same=False
+2026-03-10 13:48:44,834  font='MalgunGothic-Semilight' flags=0 kwargs={'fontname': 'malgunsl', 'fontfile': 'C:\\WINDOWS\\Fonts\\malgunsl.ttf'}
+2026-03-10 13:48:44,837  apply_redactions OK
+2026-03-10 13:48:44,893  insert_text OK  rc=1  point=Point(100.92510223388672, 421.21759033203125)
+2026-03-10 13:48:45,010  snapshot changed=True  has_bytes=True  edit_ok=True
+2026-03-11 10:40:43,288  old='쌍용어린이집'  new='쌍용어린이집'  same=True
+2026-03-11 10:40:43,288  SKIP — no change or empty
+2026-03-11 10:40:53,240  old='쌍용어린이집'  new='쌍용아린이집'  same=False
+2026-03-11 10:40:53,243  extract_font xref=697: basename='DEVEXP+ËÀ´' fname='DEVEXP+ËÀ´' sname='F1' real_family=None content_len=386324
+2026-03-11 10:40:53,244  extract_font xref=702: basename='DEVEXP+\x14Õ´' fname='DEVEXP+\x14Õ´' sname='F2' real_family=None content_len=367124
+2026-03-11 10:40:53,246  extract_font xref=707: basename='DEVEXP+ËÀ´,Bold' fname='DEVEXP+ËÀ´,Bold' sname='F3' real_family='ËÀ´,Bold' content_len=344996
+2026-03-11 10:40:53,246  matched system font: {'fontname': 'batang', 'fontfile': 'C:\\WINDOWS\\Fonts\\batang.ttc'}
+2026-03-11 10:40:53,246  font='\x14Õ´' flags=4 kwargs={'fontname': 'batang', 'fontfile': 'C:\\WINDOWS\\Fonts\\batang.ttc'}
+2026-03-11 10:40:53,256  apply_redactions OK
+2026-03-11 10:40:53,418  insert_text OK  rc=1  point=Point(196.96400451660156, 232.65203857421875)
+2026-03-11 10:40:53,888  snapshot changed=True  has_bytes=True  edit_ok=True
+2026-03-11 10:40:57,647  old='⑪근무기간'  new='⑪근무기간'  same=True
+2026-03-11 10:40:57,648  SKIP — no change or empty
+2026-03-11 10:41:02,426  old='⑪근무기간'  new='⑪근무아간'  same=False
+2026-03-11 10:41:02,427  font='ËÀ´' flags=4 kwargs={'fontname': 'batang', 'fontfile': 'C:\\WINDOWS\\Fonts\\batang.ttc'}
+2026-03-11 10:41:02,434  apply_redactions OK
+2026-03-11 10:41:02,436  insert_text OK  rc=1  point=Point(62.11199951171875, 255.93304443359375)
+2026-03-11 10:41:02,911  snapshot changed=True  has_bytes=True  edit_ok=True
+2026-03-11 10:41:15,444  old='쌍용아린이집'  new='쌍용아린이집'  same=True
+2026-03-11 10:41:15,444  SKIP — no change or empty
+2026-03-11 10:41:19,199  old='쌍용아린이집'  new='쌍용아린이집'  same=True
+2026-03-11 10:41:19,199  SKIP — no change or empty
+2026-03-11 10:41:31,481  old='쌍용아린이집'  new='쌍용아린이집'  same=True
+2026-03-11 10:41:31,481  SKIP — no change or empty
+2026-03-11 10:41:48,254  old='⑪근무아간'  new='⑪근무아간'  same=True
+2026-03-11 10:41:48,254  SKIP — no change or empty
+2026-03-11 10:58:09,038  old='쌍용어린이집'  new='쌍용아린이집'  same=False
+2026-03-11 10:58:09,040  extract_font xref=697: basename='DEVEXP+ËÀ´' fname='DEVEXP+ËÀ´' sname='F1' real_family=None content_len=386324
+2026-03-11 10:58:09,042  extract_font xref=702: basename='DEVEXP+\x14Õ´' fname='DEVEXP+\x14Õ´' sname='F2' real_family=None content_len=367124
+2026-03-11 10:58:09,043  extract_font xref=707: basename='DEVEXP+ËÀ´,Bold' fname='DEVEXP+ËÀ´,Bold' sname='F3' real_family='ËÀ´,Bold' content_len=344996
+2026-03-11 10:58:09,043  matched system font: {'fontname': 'batang', 'fontfile': 'C:\\WINDOWS\\Fonts\\batang.ttc'}
+2026-03-11 10:58:09,044  font='\x14Õ´' flags=4 kwargs={'fontname': 'batang', 'fontfile': 'C:\\WINDOWS\\Fonts\\batang.ttc'}
+2026-03-11 10:58:09,051  apply_redactions OK
+2026-03-11 10:58:09,209  insert_text OK  rc=1  point=Point(196.96400451660156, 232.65203857421875)
+2026-03-11 10:58:09,680  snapshot changed=True  has_bytes=True  edit_ok=True
+2026-03-11 10:58:16,032  old='⑫감 면 기 간'  new='⑫감 면 구 간'  same=False
+2026-03-11 10:58:16,033  font='ËÀ´' flags=4 kwargs={'fontname': 'batang', 'fontfile': 'C:\\WINDOWS\\Fonts\\batang.ttc'}
+2026-03-11 10:58:16,040  apply_redactions OK
+2026-03-11 10:58:16,042  insert_text OK  rc=1  point=Point(62.11199951171875, 267.57403564453125)
+2026-03-11 10:58:16,516  snapshot changed=True  has_bytes=True  edit_ok=True
+2026-03-11 10:59:01,364  old='⑫감 면 기 간'  new='⑫감 면 구 간'  same=False
+2026-03-11 10:59:01,364  font='ËÀ´' flags=4 kwargs={'fontname': 'batang', 'fontfile': 'C:\\WINDOWS\\Fonts\\batang.ttc'}
+2026-03-11 10:59:01,372  apply_redactions OK
+2026-03-11 10:59:01,529  insert_text OK  rc=1  point=Point(62.11199951171875, 267.57403564453125)
+2026-03-11 10:59:01,998  snapshot changed=True  has_bytes=True  edit_ok=True
+2026-03-11 11:07:22,289  old='쌍용어린이집'  new='쌍용아린이집'  same=False
+2026-03-11 11:07:22,291  embedded font lacks glyphs for edited text xref=702
+2026-03-11 11:07:22,291  extract_font xref=702: basename='DEVEXP+\x14Õ´' fname='DEVEXP+\x14Õ´' sname='F2' name_match=True real_family=None content_len=367124
+2026-03-11 11:07:22,298  embedded font lacks glyphs for edited text xref=712
+2026-03-11 11:07:22,299  extract_font xref=712: basename='DEVEXP+\x14Õ´,Bold' fname='DEVEXP+\x14Õ´,Bold' sname='F4' name_match=True real_family=None content_len=321364
+2026-03-11 11:07:22,300  embedded font lacks glyphs for edited text xref=697
+2026-03-11 11:07:22,300  extract_font xref=697: basename='DEVEXP+ËÀ´' fname='DEVEXP+ËÀ´' sname='F1' name_match=False real_family=None content_len=386324
+2026-03-11 11:07:22,301  embedded font lacks glyphs for edited text xref=707
+2026-03-11 11:07:22,301  extract_font xref=707: basename='DEVEXP+ËÀ´,Bold' fname='DEVEXP+ËÀ´,Bold' sname='F3' name_match=False real_family='ËÀ´,Bold' content_len=344996
+2026-03-11 11:07:22,302  matched system font: {'fontname': 'batang', 'fontfile': 'C:\\WINDOWS\\Fonts\\batang.ttc'}
+2026-03-11 11:07:22,302  font='\x14Õ´' flags=4 kwargs={'fontname': 'batang', 'fontfile': 'C:\\WINDOWS\\Fonts\\batang.ttc'}
+2026-03-11 11:07:22,311  apply_redactions OK
+2026-03-11 11:07:22,468  insert_text OK  rc=1  point=Point(196.96400451660156, 232.65203857421875)
+2026-03-11 11:07:22,938  snapshot changed=True  has_bytes=True  edit_ok=True
+2026-03-11 11:07:27,970  old='⑫감 면 기 간'  new='⑫감 면 구 간'  same=False
+2026-03-11 11:07:27,974  embedded font lacks glyphs for edited text xref=697
+2026-03-11 11:07:27,974  extract_font xref=697: basename='DEVEXP+ËÀ´' fname='DEVEXP+ËÀ´' sname='F1' name_match=True real_family=None content_len=386324
+2026-03-11 11:07:27,975  embedded font lacks glyphs for edited text xref=707
+2026-03-11 11:07:27,976  extract_font xref=707: basename='DEVEXP+ËÀ´,Bold' fname='DEVEXP+ËÀ´,Bold' sname='F3' name_match=True real_family='ËÀ´,Bold' content_len=344996
+2026-03-11 11:07:27,976  matched system font: {'fontname': 'batang', 'fontfile': 'C:\\WINDOWS\\Fonts\\batang.ttc'}
+2026-03-11 11:07:27,976  font='ËÀ´' flags=4 kwargs={'fontname': 'batang', 'fontfile': 'C:\\WINDOWS\\Fonts\\batang.ttc'}
+2026-03-11 11:07:27,983  apply_redactions OK
+2026-03-11 11:07:27,985  insert_text OK  rc=1  point=Point(62.11199951171875, 267.57403564453125)
+2026-03-11 11:07:28,457  snapshot changed=True  has_bytes=True  edit_ok=True
+2026-03-11 11:22:38,279  old='⑫감 면 기 간'  new='⑫감 면 구 간'  same=False
+2026-03-11 11:22:38,281  embedded font lacks glyphs for edited text xref=697
+2026-03-11 11:22:38,281  extract_font xref=697: basename='DEVEXP+ËÀ´' fname='DEVEXP+ËÀ´' sname='F1' name_match=True real_family=None content_len=386324
+2026-03-11 11:22:38,283  embedded font lacks glyphs for edited text xref=707
+2026-03-11 11:22:38,283  extract_font xref=707: basename='DEVEXP+ËÀ´,Bold' fname='DEVEXP+ËÀ´,Bold' sname='F3' name_match=True real_family='ËÀ´,Bold' content_len=344996
+2026-03-11 11:22:38,360  cjk width-match fallback selected: font=malgunsl measured=52.59 target=52.71
+2026-03-11 11:22:38,361  matched system font: {'fontname': 'malgunsl', 'fontfile': 'C:\\WINDOWS\\Fonts\\malgunsl.ttf'}
+2026-03-11 11:22:38,361  font='ËÀ´' flags=4 kwargs={'fontname': 'malgunsl', 'fontfile': 'C:\\WINDOWS\\Fonts\\malgunsl.ttf'}
+2026-03-11 11:22:38,369  apply_redactions OK
+2026-03-11 11:22:38,419  insert_text OK  rc=1  point=Point(62.11199951171875, 267.57403564453125)
+2026-03-11 11:22:38,557  snapshot changed=True  has_bytes=True  edit_ok=True
+2026-03-11 11:26:09,747  old='⑫감 면 기 간'  new='⑫감 면 구 간'  same=False
+2026-03-11 11:26:09,750  embedded font lacks glyphs for edited text xref=697
+2026-03-11 11:26:09,750  extract_font xref=697: basename='DEVEXP+ËÀ´' fname='DEVEXP+ËÀ´' sname='F1' name_match=True real_family=None content_len=386324
+2026-03-11 11:26:09,751  embedded font lacks glyphs for edited text xref=707
+2026-03-11 11:26:09,752  extract_font xref=707: basename='DEVEXP+ËÀ´,Bold' fname='DEVEXP+ËÀ´,Bold' sname='F3' name_match=True real_family='ËÀ´,Bold' content_len=344996
+2026-03-11 11:26:09,817  cjk width-match fallback selected: font=batang measured=53.99 target=52.71
+2026-03-11 11:26:09,818  matched system font: {'fontname': 'batang', 'fontfile': 'C:\\WINDOWS\\Fonts\\batang.ttc'}
+2026-03-11 11:26:09,818  font='ËÀ´' flags=4 kwargs={'fontname': 'batang', 'fontfile': 'C:\\WINDOWS\\Fonts\\batang.ttc'}
+2026-03-11 11:26:09,826  apply_redactions OK
+2026-03-11 11:26:09,981  insert_text OK  rc=1  point=Point(62.11199951171875, 267.57403564453125)
+2026-03-11 11:26:10,450  snapshot changed=True  has_bytes=True  edit_ok=True
+2026-03-11 11:26:18,420  old='쌍용어린이집'  new='쌍용아린이집'  same=False
+2026-03-11 11:26:18,422  embedded font lacks glyphs for edited text xref=702
+2026-03-11 11:26:18,422  extract_font xref=702: basename='DEVEXP+\x14Õ´' fname='DEVEXP+\x14Õ´' sname='F2' name_match=True real_family=None content_len=367124
+2026-03-11 11:26:18,423  embedded font lacks glyphs for edited text xref=712
+2026-03-11 11:26:18,424  extract_font xref=712: basename='DEVEXP+\x14Õ´,Bold' fname='DEVEXP+\x14Õ´,Bold' sname='F4' name_match=True real_family=None content_len=321364
+2026-03-11 11:26:18,425  embedded font lacks glyphs for edited text xref=697
+2026-03-11 11:26:18,425  extract_font xref=697: basename='DEVEXP+ËÀ´' fname='DEVEXP+ËÀ´' sname='F1' name_match=False real_family=None content_len=386324
+2026-03-11 11:26:18,427  embedded font lacks glyphs for edited text xref=707
+2026-03-11 11:26:18,427  extract_font xref=707: basename='DEVEXP+ËÀ´,Bold' fname='DEVEXP+ËÀ´,Bold' sname='F3' name_match=False real_family='ËÀ´,Bold' content_len=344996
+2026-03-11 11:26:18,491  cjk width-match fallback selected: font=batang measured=51.23 target=42.55
+2026-03-11 11:26:18,492  matched system font: {'fontname': 'batang', 'fontfile': 'C:\\WINDOWS\\Fonts\\batang.ttc'}
+2026-03-11 11:26:18,492  font='\x14Õ´' flags=4 kwargs={'fontname': 'batang', 'fontfile': 'C:\\WINDOWS\\Fonts\\batang.ttc'}
+2026-03-11 11:26:18,499  apply_redactions OK
+2026-03-11 11:26:18,541  insert_text OK  rc=1  point=Point(196.96400451660156, 232.65203857421875)
+2026-03-11 11:26:19,015  snapshot changed=True  has_bytes=True  edit_ok=True
+2026-03-11 11:31:25,040  old='⑪근 무 기 간'  new='⑪근 무 구 간'  same=False
+2026-03-11 11:31:25,042  embedded font lacks glyphs for edited text xref=697
+2026-03-11 11:31:25,043  extract_font xref=697: basename='DEVEXP+ËÀ´' fname='DEVEXP+ËÀ´' sname='F1' name_match=True real_family=None content_len=386324
+2026-03-11 11:31:25,044  embedded font lacks glyphs for edited text xref=707
+2026-03-11 11:31:25,044  extract_font xref=707: basename='DEVEXP+ËÀ´,Bold' fname='DEVEXP+ËÀ´,Bold' sname='F3' name_match=True real_family='ËÀ´,Bold' content_len=344996
+2026-03-11 11:31:25,110  cjk width-match fallback selected: font=batang measured=53.99 target=52.71
+2026-03-11 11:31:25,110  matched system font: {'fontname': 'batang', 'fontfile': 'C:\\WINDOWS\\Fonts\\batang.ttc'}
+2026-03-11 11:31:25,110  font='ËÀ´' flags=4 kwargs={'fontname': 'batang', 'fontfile': 'C:\\WINDOWS\\Fonts\\batang.ttc'}
+2026-03-11 11:31:25,118  apply_redactions OK
+2026-03-11 11:31:25,120  embedded font lacks glyphs for edited text xref=697
+2026-03-11 11:31:25,120  extract_font xref=697: basename='DEVEXP+ËÀ´' fname='DEVEXP+ËÀ´' sname='F1' name_match=True real_family=None content_len=386324
+2026-03-11 11:31:25,121  embedded font lacks glyphs for edited text xref=707
+2026-03-11 11:31:25,121  extract_font xref=707: basename='DEVEXP+ËÀ´,Bold' fname='DEVEXP+ËÀ´,Bold' sname='F3' name_match=True real_family='ËÀ´,Bold' content_len=344996
+2026-03-11 11:31:25,188  cjk width-match fallback selected: font=batang measured=53.99 target=52.71
+2026-03-11 11:31:25,189  matched system font: {'fontname': 'batang', 'fontfile': 'C:\\WINDOWS\\Fonts\\batang.ttc'}
+2026-03-11 11:31:25,346  insert_text OK  rc=1  point=Point(62.11199951171875, 255.93304443359375)
+2026-03-11 11:31:25,814  snapshot changed=True  has_bytes=True  edit_ok=True
+2026-03-11 11:48:33,468  old='⑫감 면 기 간'  new='⑫감 면 구 간'  same=False
+2026-03-11 11:48:33,471  embedded font lacks glyphs for edited text xref=697
+2026-03-11 11:48:33,471  extract_font xref=697: basename='DEVEXP+ËÀ´' fname='DEVEXP+ËÀ´' sname='F1' name_match=True real_family=None content_len=386324
+2026-03-11 11:48:33,473  embedded font lacks glyphs for edited text xref=707
+2026-03-11 11:48:33,473  extract_font xref=707: basename='DEVEXP+ËÀ´,Bold' fname='DEVEXP+ËÀ´,Bold' sname='F3' name_match=True real_family='ËÀ´,Bold' content_len=344996
+2026-03-11 11:48:33,536  cjk width-match fallback selected: font=batang measured=53.99 target=52.71
+2026-03-11 11:48:33,537  matched system font: {'fontname': 'batang', 'fontfile': 'C:\\WINDOWS\\Fonts\\batang.ttc'}
+2026-03-11 11:48:33,537  font='ËÀ´' flags=4 kwargs={'fontname': 'batang', 'fontfile': 'C:\\WINDOWS\\Fonts\\batang.ttc'}
+2026-03-11 11:48:33,545  apply_redactions OK
+2026-03-11 11:48:33,546  embedded font lacks glyphs for edited text xref=697
+2026-03-11 11:48:33,546  using embedded font with partial glyph coverage xref=697
+2026-03-11 11:48:33,547  extract_font xref=697: basename='DEVEXP+ËÀ´' fname='DEVEXP+ËÀ´' sname='F1' name_match=True real_family=None content_len=386324
+2026-03-11 11:48:33,547  using embedded font directly: {'fontname': 'pdfpro_emb_697', 'fontfile': 'C:\\Users\\jang3\\AppData\\Local\\Temp\\pdfpro_font_697_84f80ff33c96.ttf'}
+2026-03-11 11:48:33,772  insert_text mixed OK  point=Point(62.11199951171875, 267.57403564453125)  fallback_used=True
+2026-03-11 11:48:34,249  snapshot changed=True  has_bytes=True  edit_ok=True
+2026-03-11 14:54:02,137  old='쌍용어린이집'  new='쌍양어린이집'  same=False
+2026-03-11 14:54:02,146  embedded font lacks glyphs for edited text xref=702
+2026-03-11 14:54:02,146  extract_font xref=702: basename='DEVEXP+\x14Õ´' fname='DEVEXP+\x14Õ´' sname='F2' name_match=True real_family=None content_len=367124
+2026-03-11 14:54:02,151  embedded font lacks glyphs for edited text xref=712
+2026-03-11 14:54:02,151  extract_font xref=712: basename='DEVEXP+\x14Õ´,Bold' fname='DEVEXP+\x14Õ´,Bold' sname='F4' name_match=True real_family=None content_len=321364
+2026-03-11 14:54:02,156  embedded font lacks glyphs for edited text xref=697
+2026-03-11 14:54:02,157  extract_font xref=697: basename='DEVEXP+ËÀ´' fname='DEVEXP+ËÀ´' sname='F1' name_match=False real_family=None content_len=386324
+2026-03-11 14:54:02,163  embedded font lacks glyphs for edited text xref=707
+2026-03-11 14:54:02,163  extract_font xref=707: basename='DEVEXP+ËÀ´,Bold' fname='DEVEXP+ËÀ´,Bold' sname='F3' name_match=False real_family='ËÀ´,Bold' content_len=344996
+2026-03-11 14:54:02,236  cjk width-match fallback selected: font=batang measured=51.23 target=42.55
+2026-03-11 14:54:02,237  matched system font: {'fontname': 'batang', 'fontfile': 'C:\\WINDOWS\\Fonts\\batang.ttc'}
+2026-03-11 14:54:02,237  font='\x14Õ´' flags=4 kwargs={'fontname': 'batang', 'fontfile': 'C:\\WINDOWS\\Fonts\\batang.ttc'}
+2026-03-11 14:54:02,245  apply_redactions OK
+2026-03-11 14:54:02,246  embedded font lacks glyphs for edited text xref=702
+2026-03-11 14:54:02,246  using embedded font with partial glyph coverage xref=702
+2026-03-11 14:54:02,247  extract_font xref=702: basename='DEVEXP+\x14Õ´' fname='DEVEXP+\x14Õ´' sname='F2' name_match=True real_family=None content_len=367124
+2026-03-11 14:54:02,247  using embedded font directly: {'fontname': 'pdfpro_emb_702', 'fontfile': 'C:\\Users\\jang3\\AppData\\Local\\Temp\\pdfpro_font_702_b46c71f236ea.ttf'}
+2026-03-11 14:54:02,428  insert_text mixed OK  point=Point(196.96400451660156, 232.65203857421875)  fallback_used=True
+2026-03-11 14:54:02,902  snapshot changed=True  has_bytes=True  edit_ok=True
+2026-03-11 14:54:08,021  old='⑪근 무 기 간'  new='⑪근 마 기 간'  same=False
+2026-03-11 14:54:08,023  embedded font lacks glyphs for edited text xref=697
+2026-03-11 14:54:08,023  extract_font xref=697: basename='DEVEXP+ËÀ´' fname='DEVEXP+ËÀ´' sname='F1' name_match=True real_family=None content_len=386324
+2026-03-11 14:54:08,024  embedded font lacks glyphs for edited text xref=707
+2026-03-11 14:54:08,024  extract_font xref=707: basename='DEVEXP+ËÀ´,Bold' fname='DEVEXP+ËÀ´,Bold' sname='F3' name_match=True real_family='ËÀ´,Bold' content_len=344996
+2026-03-11 14:54:08,092  cjk width-match fallback selected: font=batang measured=53.99 target=52.71
+2026-03-11 14:54:08,093  matched system font: {'fontname': 'batang', 'fontfile': 'C:\\WINDOWS\\Fonts\\batang.ttc'}
+2026-03-11 14:54:08,093  font='ËÀ´' flags=4 kwargs={'fontname': 'batang', 'fontfile': 'C:\\WINDOWS\\Fonts\\batang.ttc'}
+2026-03-11 14:54:08,101  apply_redactions OK
+2026-03-11 14:54:08,103  embedded font lacks glyphs for edited text xref=697
+2026-03-11 14:54:08,103  using embedded font with partial glyph coverage xref=697
+2026-03-11 14:54:08,103  extract_font xref=697: basename='DEVEXP+ËÀ´' fname='DEVEXP+ËÀ´' sname='F1' name_match=True real_family=None content_len=386324
+2026-03-11 14:54:08,103  using embedded font directly: {'fontname': 'pdfpro_emb_697', 'fontfile': 'C:\\Users\\jang3\\AppData\\Local\\Temp\\pdfpro_font_697_84f80ff33c96.ttf'}
+2026-03-11 14:54:08,143  insert_text mixed OK  point=Point(62.11199951171875, 255.93304443359375)  fallback_used=True
+2026-03-11 14:54:08,622  snapshot changed=True  has_bytes=True  edit_ok=True
+2026-03-11 16:13:34,168  old='쌍용어린이집'  new='쌍용아린이집'  same=False
+2026-03-11 16:13:34,176  embedded font lacks glyphs for edited text xref=702
+2026-03-11 16:13:34,176  extract_font xref=702: basename='DEVEXP+\x14Õ´' fname='DEVEXP+\x14Õ´' sname='F2' name_match=True real_family=None content_len=367124
+2026-03-11 16:13:34,181  embedded font lacks glyphs for edited text xref=712
+2026-03-11 16:13:34,181  extract_font xref=712: basename='DEVEXP+\x14Õ´,Bold' fname='DEVEXP+\x14Õ´,Bold' sname='F4' name_match=True real_family=None content_len=321364
+2026-03-11 16:13:34,186  embedded font lacks glyphs for edited text xref=697
+2026-03-11 16:13:34,187  extract_font xref=697: basename='DEVEXP+ËÀ´' fname='DEVEXP+ËÀ´' sname='F1' name_match=False real_family=None content_len=386324
+2026-03-11 16:13:34,192  embedded font lacks glyphs for edited text xref=707
+2026-03-11 16:13:34,192  extract_font xref=707: basename='DEVEXP+ËÀ´,Bold' fname='DEVEXP+ËÀ´,Bold' sname='F3' name_match=False real_family='ËÀ´,Bold' content_len=344996
+2026-03-11 16:13:34,257  cjk width-match fallback selected: font=batang measured=51.23 target=42.55
+2026-03-11 16:13:34,257  matched system font: {'fontname': 'batang', 'fontfile': 'C:\\WINDOWS\\Fonts\\batang.ttc'}
+2026-03-11 16:13:34,257  font='\x14Õ´' flags=4 kwargs={'fontname': 'batang', 'fontfile': 'C:\\WINDOWS\\Fonts\\batang.ttc'}
+2026-03-11 16:13:34,266  apply_redactions OK
+2026-03-11 16:13:34,267  embedded font lacks glyphs for edited text xref=702
+2026-03-11 16:13:34,267  using embedded font with partial glyph coverage xref=702
+2026-03-11 16:13:34,268  extract_font xref=702: basename='DEVEXP+\x14Õ´' fname='DEVEXP+\x14Õ´' sname='F2' name_match=True real_family=None content_len=367124
+2026-03-11 16:13:34,268  using embedded font directly: {'fontname': 'pdfpro_emb_702', 'fontfile': 'C:\\Users\\jang3\\AppData\\Local\\Temp\\pdfpro_font_702_b46c71f236ea.ttf'}
+2026-03-11 16:13:34,449  insert_text mixed OK  point=Point(196.96400451660156, 232.65203857421875)  fallback_used=True
+2026-03-11 16:13:34,923  snapshot changed=True  has_bytes=True  edit_ok=True
+2026-03-11 16:13:41,208  old='⑫감 면 기 간'  new='⑫감 면 구 간'  same=False
+2026-03-11 16:13:41,210  embedded font lacks glyphs for edited text xref=697
+2026-03-11 16:13:41,210  extract_font xref=697: basename='DEVEXP+ËÀ´' fname='DEVEXP+ËÀ´' sname='F1' name_match=True real_family=None content_len=386324
+2026-03-11 16:13:41,211  embedded font lacks glyphs for edited text xref=707
+2026-03-11 16:13:41,212  extract_font xref=707: basename='DEVEXP+ËÀ´,Bold' fname='DEVEXP+ËÀ´,Bold' sname='F3' name_match=True real_family='ËÀ´,Bold' content_len=344996
+2026-03-11 16:13:41,277  cjk width-match fallback selected: font=batang measured=53.99 target=52.71
+2026-03-11 16:13:41,277  matched system font: {'fontname': 'batang', 'fontfile': 'C:\\WINDOWS\\Fonts\\batang.ttc'}
+2026-03-11 16:13:41,278  font='ËÀ´' flags=4 kwargs={'fontname': 'batang', 'fontfile': 'C:\\WINDOWS\\Fonts\\batang.ttc'}
+2026-03-11 16:13:41,286  apply_redactions OK
+2026-03-11 16:13:41,287  embedded font lacks glyphs for edited text xref=697
+2026-03-11 16:13:41,287  using embedded font with partial glyph coverage xref=697
+2026-03-11 16:13:41,288  extract_font xref=697: basename='DEVEXP+ËÀ´' fname='DEVEXP+ËÀ´' sname='F1' name_match=True real_family=None content_len=386324
+2026-03-11 16:13:41,288  using embedded font directly: {'fontname': 'pdfpro_emb_697', 'fontfile': 'C:\\Users\\jang3\\AppData\\Local\\Temp\\pdfpro_font_697_84f80ff33c96.ttf'}
+2026-03-11 16:13:41,307  insert_text mixed OK  point=Point(62.11199951171875, 267.57403564453125)  fallback_used=True
+2026-03-11 16:13:41,780  snapshot changed=True  has_bytes=True  edit_ok=True
+2026-03-13 13:21:13,026  old='쌍용어린이집'  new='쌍양어린이집'  same=False
+2026-03-13 13:21:13,044  embedded font lacks glyphs for edited text xref=702
+2026-03-13 13:21:13,044  extract_font xref=702: basename='DEVEXP+\x14Õ´' fname='DEVEXP+\x14Õ´' sname='F2' name_match=True real_family=None content_len=367124
+2026-03-13 13:21:13,049  embedded font lacks glyphs for edited text xref=712
+2026-03-13 13:21:13,049  extract_font xref=712: basename='DEVEXP+\x14Õ´,Bold' fname='DEVEXP+\x14Õ´,Bold' sname='F4' name_match=True real_family=None content_len=321364
+2026-03-13 13:21:13,055  embedded font lacks glyphs for edited text xref=697
+2026-03-13 13:21:13,055  extract_font xref=697: basename='DEVEXP+ËÀ´' fname='DEVEXP+ËÀ´' sname='F1' name_match=False real_family=None content_len=386324
+2026-03-13 13:21:13,060  embedded font lacks glyphs for edited text xref=707
+2026-03-13 13:21:13,060  extract_font xref=707: basename='DEVEXP+ËÀ´,Bold' fname='DEVEXP+ËÀ´,Bold' sname='F3' name_match=False real_family='ËÀ´,Bold' content_len=344996
+2026-03-13 13:21:13,124  cjk width-match fallback selected: font=batang measured=51.23 target=42.55
+2026-03-13 13:21:13,125  matched system font: {'fontname': 'batang', 'fontfile': 'C:\\WINDOWS\\Fonts\\batang.ttc'}
+2026-03-13 13:21:13,125  font='\x14Õ´' flags=4 kwargs={'fontname': 'batang', 'fontfile': 'C:\\WINDOWS\\Fonts\\batang.ttc'}
+2026-03-13 13:21:13,133  apply_redactions OK
+2026-03-13 13:21:13,135  embedded font lacks glyphs for edited text xref=702
+2026-03-13 13:21:13,135  using embedded font with partial glyph coverage xref=702
+2026-03-13 13:21:13,135  extract_font xref=702: basename='DEVEXP+\x14Õ´' fname='DEVEXP+\x14Õ´' sname='F2' name_match=True real_family=None content_len=367124
+2026-03-13 13:21:13,135  using embedded font directly: {'fontname': 'pdfpro_emb_702', 'fontfile': 'C:\\Users\\jang3\\AppData\\Local\\Temp\\pdfpro_font_702_b46c71f236ea.ttf'}
+2026-03-13 13:21:13,307  insert_text mixed OK  point=Point(196.96400451660156, 232.65203857421875)  fallback_used=True
+2026-03-13 13:21:13,767  snapshot changed=True  has_bytes=True  edit_ok=True
+2026-03-13 13:21:14,076  old='66,165,540'  new='66,165,540'  same=True
+2026-03-13 13:21:14,076  SKIP — no change or empty
+2026-03-13 13:21:19,547  old='⑫감 면 기 간'  new='⑫감 면 구 간'  same=False
+2026-03-13 13:21:19,549  embedded font lacks glyphs for edited text xref=697
+2026-03-13 13:21:19,557  extract_font xref=697: basename='DEVEXP+ËÀ´' fname='DEVEXP+ËÀ´' sname='F1' name_match=True real_family=None content_len=386324
+2026-03-13 13:21:19,558  embedded font lacks glyphs for edited text xref=707
+2026-03-13 13:21:19,558  extract_font xref=707: basename='DEVEXP+ËÀ´,Bold' fname='DEVEXP+ËÀ´,Bold' sname='F3' name_match=True real_family='ËÀ´,Bold' content_len=344996
+2026-03-13 13:21:19,620  cjk width-match fallback selected: font=batang measured=53.99 target=52.71
+2026-03-13 13:21:19,621  matched system font: {'fontname': 'batang', 'fontfile': 'C:\\WINDOWS\\Fonts\\batang.ttc'}
+2026-03-13 13:21:19,622  font='ËÀ´' flags=4 kwargs={'fontname': 'batang', 'fontfile': 'C:\\WINDOWS\\Fonts\\batang.ttc'}
+2026-03-13 13:21:19,629  apply_redactions OK
+2026-03-13 13:21:19,630  embedded font lacks glyphs for edited text xref=697
+2026-03-13 13:21:19,630  using embedded font with partial glyph coverage xref=697
+2026-03-13 13:21:19,631  extract_font xref=697: basename='DEVEXP+ËÀ´' fname='DEVEXP+ËÀ´' sname='F1' name_match=True real_family=None content_len=386324
+2026-03-13 13:21:19,631  using embedded font directly: {'fontname': 'pdfpro_emb_697', 'fontfile': 'C:\\Users\\jang3\\AppData\\Local\\Temp\\pdfpro_font_697_84f80ff33c96.ttf'}
+2026-03-13 13:21:19,649  insert_text mixed OK  point=Point(62.11199951171875, 267.57403564453125)  fallback_used=True
+2026-03-13 13:21:20,112  snapshot changed=True  has_bytes=True  edit_ok=True
+2026-03-13 13:22:43,752  old='귀사의 사업이 더욱 번창하시기를 기원하오며, 항상 각별하신 협조에 감사드립니다.'  new='귀사의 사압이 더욱 번창하시기를 기원하오며, 항상 각별하신 협조에 감사드립니다.'  same=False
+2026-03-13 13:22:43,762  embedded font lacks glyphs for edited text xref=7
+2026-03-13 13:22:43,793  extract_font xref=7: basename='AAAAAC+MalgunGothic' fname='AAAAAC+MalgunGothic' sname='TT2' name_match=True real_family='MalgunGothic' content_len=33408
+2026-03-13 13:22:43,794  matched system font: {'fontname': 'malgun', 'fontfile': 'C:\\WINDOWS\\Fonts\\malgun.ttf'}
+2026-03-13 13:22:43,794  font='MalgunGothic' flags=4 kwargs={'fontname': 'malgun', 'fontfile': 'C:\\WINDOWS\\Fonts\\malgun.ttf'}
+2026-03-13 13:22:43,796  apply_redactions OK
+2026-03-13 13:22:43,797  embedded font lacks glyphs for edited text xref=7
+2026-03-13 13:22:43,797  using embedded font with partial glyph coverage xref=7
+2026-03-13 13:22:43,797  extract_font xref=7: basename='AAAAAC+MalgunGothic' fname='AAAAAC+MalgunGothic' sname='TT2' name_match=True real_family='MalgunGothic' content_len=33408
+2026-03-13 13:22:43,798  using embedded font directly: {'fontname': 'pdfpro_emb_7', 'fontfile': 'C:\\Users\\jang3\\AppData\\Local\\Temp\\pdfpro_font_7_734d85da6b81.ttf'}
+2026-03-13 13:22:43,891  insert_text mixed OK  point=Point(78.99970245361328, 173.0)  fallback_used=True
+2026-03-13 13:22:44,255  snapshot changed=True  has_bytes=True  edit_ok=True
+2026-03-13 13:22:47,017  old='서명·날인하여 회사보관용은 귀사에서 보관하시고 회신용은 당사의 감사인인 한미회계법인 앞으로 직접 우송하여'  new='서명·날인하여 회사보관용은 귀사에서 보관하시고 회신용은 당사의 감사인인 한미회계법인 앞으로 직접 우송하여'  same=True
+2026-03-13 13:22:47,026  SKIP — no change or empty
+2026-03-13 13:22:48,693  old='계감사 목적으로만 이용될 것입니다'  new='계감사 목적으로만 이용될 것입니다'  same=True
+2026-03-13 13:22:48,696  SKIP — no change or empty
+2026-03-13 13:35:23,130  old='BISTOS AMERICA INC(BA)'  new='BISTOS AMERICA INC(BA)'  same=True
+2026-03-13 13:35:23,132  SKIP — no change or empty
+2026-03-19 11:16:13,758  old='쌍용어린이집'  new='쌍양어린이집'  same=False
+2026-03-19 11:16:13,767  embedded font lacks glyphs for edited text xref=702
+2026-03-19 11:16:13,767  extract_font xref=702: basename='DEVEXP+\x14Õ´' fname='DEVEXP+\x14Õ´' sname='F2' name_match=True real_family=None content_len=367124
+2026-03-19 11:16:13,772  embedded font lacks glyphs for edited text xref=712
+2026-03-19 11:16:13,773  extract_font xref=712: basename='DEVEXP+\x14Õ´,Bold' fname='DEVEXP+\x14Õ´,Bold' sname='F4' name_match=True real_family=None content_len=321364
+2026-03-19 11:16:13,778  embedded font lacks glyphs for edited text xref=697
+2026-03-19 11:16:13,778  extract_font xref=697: basename='DEVEXP+ËÀ´' fname='DEVEXP+ËÀ´' sname='F1' name_match=False real_family=None content_len=386324
+2026-03-19 11:16:13,784  embedded font lacks glyphs for edited text xref=707
+2026-03-19 11:16:13,784  extract_font xref=707: basename='DEVEXP+ËÀ´,Bold' fname='DEVEXP+ËÀ´,Bold' sname='F3' name_match=False real_family='ËÀ´,Bold' content_len=344996
+2026-03-19 11:16:13,857  cjk width-match fallback selected: font=batang measured=51.23 target=42.55
+2026-03-19 11:16:13,858  matched system font: {'fontname': 'batang', 'fontfile': 'C:\\WINDOWS\\Fonts\\batang.ttc'}
+2026-03-19 11:16:13,858  font='\x14Õ´' flags=4 kwargs={'fontname': 'batang', 'fontfile': 'C:\\WINDOWS\\Fonts\\batang.ttc'}
+2026-03-19 11:16:13,866  apply_redactions OK
+2026-03-19 11:16:13,868  embedded font lacks glyphs for edited text xref=702
+2026-03-19 11:16:13,868  using embedded font with partial glyph coverage xref=702
+2026-03-19 11:16:13,868  extract_font xref=702: basename='DEVEXP+\x14Õ´' fname='DEVEXP+\x14Õ´' sname='F2' name_match=True real_family=None content_len=367124
+2026-03-19 11:16:13,868  using embedded font directly: {'fontname': 'pdfpro_emb_702', 'fontfile': 'C:\\Users\\jang3\\AppData\\Local\\Temp\\pdfpro_font_702_b46c71f236ea.ttf'}
+2026-03-19 11:16:14,047  insert_text mixed OK  point=Point(196.96400451660156, 232.65203857421875)  fallback_used=True
+2026-03-19 11:16:14,515  snapshot changed=True  has_bytes=True  edit_ok=True
