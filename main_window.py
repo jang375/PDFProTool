@@ -15,6 +15,7 @@ from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QThread, QSettings, QByteArray,
 from PyQt6.QtGui import (
     QAction, QColor, QFont, QIcon, QKeySequence, QShortcut,
 )
+from PyQt6.QtPrintSupport import QPrinter, QPrintDialog
 from PyQt6.QtWidgets import (
     QApplication, QDialog, QDialogButtonBox, QFileDialog,
     QFrame, QGridLayout, QHBoxLayout, QInputDialog,
@@ -475,6 +476,10 @@ class MainWindow(QMainWindow):
         save_btn = make_tool_button("💾", "저장 (Ctrl+S)", "save")
         save_btn.clicked.connect(self._save_file)
         tb_layout.addWidget(save_btn)
+
+        print_btn = make_tool_button("🖨", "인쇄 (Ctrl+P)", "printer")
+        print_btn.clicked.connect(self._print_document)
+        tb_layout.addWidget(print_btn)
         tb_layout.addWidget(make_divider())
 
         quick_tools_label = QLabel("빠른 작업")
@@ -710,6 +715,7 @@ class MainWindow(QMainWindow):
         QShortcut(QKeySequence("Ctrl+O"), self).activated.connect(self._open_file)
         QShortcut(QKeySequence("Ctrl+S"), self).activated.connect(self._save_file)
         QShortcut(QKeySequence("Ctrl+Shift+S"), self).activated.connect(self._save_as)
+        QShortcut(QKeySequence("Ctrl+P"), self).activated.connect(self._print_document)
         QShortcut(QKeySequence("Ctrl+F"), self).activated.connect(
             lambda: self._search_input.setFocus()
         )
@@ -931,6 +937,28 @@ class MainWindow(QMainWindow):
         
         self._pending_save_as_path = path # Store to update tab later
         self._start_save_worker(doc, path)
+
+    # ── Print ─────────────────────────────────
+
+    def _print_document(self):
+        tab = self._active_tab()
+        doc = self._active_doc()
+        if not doc or not tab:
+            QMessageBox.information(self, "인쇄", "인쇄할 문서가 없습니다.")
+            return
+
+        try:
+            # Burn overlay stamps before printing
+            self._pdf_scroll.pdf_widget.burn_overlay_stamps()
+
+            from print_dialog import AdvancedPrintDialog
+            dialog = AdvancedPrintDialog(doc, tab.file_path, tab.current_page, self)
+            dialog.exec()
+
+            self._set_status("인쇄 다이얼로그를 종료했습니다.")
+
+        except Exception as e:
+            QMessageBox.critical(self, "인쇄 오류", f"인쇄 중 오류가 발생했습니다:\n{e}")
 
     # ── Navigation ────────────────────────────
 
